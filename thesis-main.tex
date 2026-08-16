@@ -7,103 +7,125 @@
 \usepackage{acronym}
 
 \school{\unibo}
-\programme{Corso di Laurea [Magistrale?] in Ingegneria e Scienze Informatiche}
-\title{Fancy Title}
-\author{Candidate Name}
+\programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
+\title{Generazione automatica di dataset text-to-SPARQL per fine-tuning di LLM su knowledge graph clinico-oncologico}
+\author{Matteo Tonelli}
 \date{\today}
-\subject{Supervisor's course name}
-\supervisor{Prof. Supervisor Here}
-\cosupervisor{Dott. CoSupervisor 1}
-\morecosupervisor{Dott. CoSupervisor 2}
-\session{I}
-\academicyear{2022-2023}
+\subject{Programmazione}
+\supervisor{Prof.ssa Antonella Carbonaro}
+\session{II}
+\academicyear{2025-2026}
 
-% Definition of acronyms
-\acrodef{IoT}{Internet of Thing}
-\acrodef{vm}[VM]{Virtual Machine}
+\acrodef{KG}{Knowledge Graph}
+\acrodef{LLM}{Large Language Model}
+\acrodef{RDF}{Resource Description Framework}
+\acrodef{LoRA}{Low-Rank Adaptation}
+\acrodef{QLoRA}{Quantized Low-Rank Adaptation}
+\acrodef{ECOG}{Eastern Cooperative Oncology Group}
+\acrodef{TNM}{Tumor, Node, Metastasis}
+\acrodef{HPC}{High Performance Computing}
+\acrodef{GPU}{Graphics Processing Unit}
+\acrodef{API}{Application Programming Interface}
 
-
-\mainlinespacing{1.241} % line spacing in mainmatter, comment to default (1)
+\mainlinespacing{1.241} 
 
 \begin{document}
 
 \frontmatter\frontispiece
 
-\begin{abstract}	
-Max 2000 characters, strict.
+\begin{abstract}
+    % TODO: abstract vero, max 2000 caratteri (limite rigido del template).
+    % Scrivilo per ultimo, quando il resto e' stabile -- vedi mappa_contenuti_tesi.md.
 \end{abstract}
 
-\begin{dedication} % this is optional
-Optional. Max a few lines.
-\end{dedication}
 
-%----------------------------------------------------------------------------------------
-\tableofcontents   
+\tableofcontents
 \listoffigures     % (optional) comment if empty
 \lstlistoflistings % (optional) comment if empty
-%----------------------------------------------------------------------------------------
 
 \mainmatter
 
-%----------------------------------------------------------------------------------------
 \chapter{Introduction}
 \label{chap:introduction}
-%----------------------------------------------------------------------------------------
-
-Write your intro here.
-\sidenote{Add sidenotes in this way. They are named after the author of the thesis}
-
-You can use acronyms that your defined previously,
-such as \ac{IoT}.
-%
-If you use acronyms twice,
-they will be written in full only once
-(indeed, you can mention the \ac{IoT} now without it being fully explained).
-%
-In some cases, you may need a plural form of the acronym.
-%
-For instance,
-that you are discussing \acp{vm},
-you may need both \ac{vm} and \acp{vm}.
 
 \paragraph{Structure of the Thesis}
 
-\note{At the end, describe the structure of the paper}
+\chapter{Background}
+\label{chap:background}
 
-\chapter{State of the art}
+Un knowledge graph è una rappresentazione strutturata della conoscenza in cui le entità del dominio (pazienti, diagnosi, terapie, nel caso del Cancer Virtual Lab) sono modellate come nodi, e le relazioni tra esse come archi etichettati. Questa rappresentazione segue tipicamente il modello RDF (\emph{Resource Description Framework}), in cui ogni fatto è espresso come una tripla soggetto-predicato-oggetto, ad esempio un paziente collegato a una diagnosi tramite la relazione \texttt{has\_diagnosis}.
 
-I suggest referencing stuff as follows: \cref{fig:random-image} or \Cref{fig:random-image}
+SPARQL è il linguaggio di interrogazione standard per dati RDF, analogo per ruolo a SQL nel contesto delle basi di dati relazionali. Una query SPARQL specifica un pattern di triple da individuare nel grafo, con la possibilità di applicare filtri sui valori e vincoli sulla struttura delle relazioni attraversate.
 
-\begin{figure}
-    \centering
-    \includegraphics[width=.8\linewidth]{figures/random-image.pdf}
-    \caption{Some random image}
-    \label{fig:random-image}
-\end{figure}
+Il problema del text-to-SPARQL si inserisce in una famiglia più ampia di compiti noti in letteratura come semantic parsing, in cui un sistema deve tradurre un enunciato in linguaggio naturale in una rappresentazione formale eseguibile. Nel caso specifico del text-to-SQL e del text-to-SPARQL, la rappresentazione target è un linguaggio di interrogazione strutturato, e la difficoltà principale risiede nella necessità di colmare il divario tra la libertà espressiva del linguaggio naturale e la rigidità sintattica e semantica del linguaggio target. Un modello deve non solo comprendere l'intento della domanda, ma anche conoscere con precisione lo schema sottostante, ovvero i nomi delle entità, delle proprietà e delle relazioni disponibili, poiché un errore anche minimo nella scelta di un predicato produce una query sintatticamente valida ma semanticamente errata.
 
-\section{Some cool topic}
+Nel dominio specifico del text-to-SPARQL su knowledge graph clinici, questa difficoltà è accentuata da due fattori. In primo luogo, lo schema è spesso altamente specialistico e non presente nella conoscenza pregressa di un modello linguistico generalista, che non ha modo di conoscere a priori l'esistenza di una proprietà come \texttt{has\_ECOG\_status} o di un'entità come \emph{Pathological TNM}. In secondo luogo, la scarsità di dati annotati è un problema ricorrente in ambito clinico, dove la produzione di coppie domanda-query richiede competenze di dominio che non tutti gli annotatori possiedono.
 
-\chapter{Contribution}
+Diversi lavori in letteratura hanno affrontato il problema della costruzione di dataset per il text-to-SPARQL, adottando strategie differenti per generare la componente in linguaggio naturale a partire da query strutturate. LC-QuAD, nelle sue due versioni~\cite{lcquad1,lcquad2}, costruisce le domande a partire da template applicati al grafo, genera una domanda intermedia in linguaggio quasi naturale (NNQT, \emph{Normalized Natural Question Template}) e infine affida a annotatori umani, tramite piattaforme di crowdsourcing, la parafrasi finale in linguaggio naturale fluente, producendo una singola parafrasi per ciascuna domanda. MK-SQuIT~\cite{mksquit} adotta invece un approccio interamente automatico, generando sia la query sia la sua controparte testuale tramite una grammatica formale, senza alcuna fase di parafrasi successiva: la variabilità linguistica del dataset dipende quindi unicamente dalla ricchezza della grammatica stessa. Un lavoro più recente di IBM Research, condotto da Bulle Labate e colleghi~\cite{ibm2025}, applica invece un modello linguistico di grandi dimensioni per rigenerare le parafrasi delle domande già presenti in LC-QuAD, validando la qualità del risultato tramite un secondo modello linguistico nel ruolo di giudice, secondo cinque criteri valutati su una scala da uno a cinque.
 
-You may also put some code snippet (which is NOT float by default), eg: \cref{lst:random-code}.
+Questi tre lavori delineano uno spettro di possibili approcci: da un estremo interamente manuale nella fase di parafrasi, a un estremo interamente automatico privo di parafrasi, fino a un approccio ibrido in cui l'automazione tramite modello linguistico sostituisce l'annotatore umano pur mantenendo una fase di parafrasi esplicita. L'utilizzo di modelli linguistici per l'augmentation testuale non è tuttavia privo di rischi, in particolare quando applicato a domini con vocabolario controllato: un modello può introdurre sinonimi lessicalmente plausibili ma semanticamente non equivalenti al termine originale, alterando il significato clinico di un valore senza che questo risulti evidente da un controllo superficiale del testo prodotto.
 
-\lstinputlisting[float,language=Java,label={lst:random-code}]{listings/HelloWorld.java}
+Il lavoro descritto in questa tesi si colloca in prossimità dell'estremo automatico dello spettro appena descritto, condividendo con MK-SQuIT l'assenza di annotazione umana nella fase di parafrasi, ma introducendo, a differenza di quest'ultimo, una fase di validazione programmatica multilivello sull'output del modello linguistico, distinta sia dall'approccio di IBM Research, che affida la validazione a un secondo modello linguistico, sia dall'assenza di validazione esplicita in MK-SQuIT.
 
-\section{Fancy formulas here}
+Le tecniche di augmentation testuale basate su modelli linguistici di grandi dimensioni si sono affermate come alternativa alla parafrasi manuale in numerosi compiti di elaborazione del linguaggio naturale, sfruttando la capacità di questi modelli di produrre riformulazioni fluenti e grammaticalmente corrette a partire da un testo sorgente. Rispetto a tecniche più risalenti, come la sostituzione di sinonimi tramite risorse lessicali statiche o la back-translation attraverso un sistema di traduzione automatica, un modello linguistico generativo consente una variazione più ampia nella struttura sintattica e nel registro della frase prodotta, non limitandosi alla sola sostituzione lessicale.
 
-%----------------------------------------------------------------------------------------
-% BIBLIOGRAPHY
-%----------------------------------------------------------------------------------------
+Questa flessibilità comporta tuttavia un rischio strutturale, distinto dal semplice errore casuale: un modello linguistico generalista non possiede, per costruzione, conoscenza affidabile di vocabolari controllati specifici di un dominio, quali codici di classificazione clinica, terminologie normalizzate, o distinzioni concettuali che a un lettore non esperto del dominio possono apparire equivalenti pur non essendolo. Nel richiedere una parafrasi o un sinonimo per un termine di questo tipo, il modello può produrre un'alternativa lessicalmente plausibile ma semanticamente non equivalente, senza segnalare in alcun modo l'incertezza sottostante. Questo comportamento si manifesta tipicamente in due forme distinte. La prima è la sostituzione di un termine tecnico con un termine di registro comune tratto da un dominio concettualmente adiacente ma distinto, che altera il contesto interpretativo del valore pur mantenendone una plausibilità superficiale. La seconda, più marcata, è l'allucinazione vera e propria, in cui il modello associa a un codice o a un identificativo privo di significato lessicale intrinseco un'interpretazione testuale inventata, spesso non verificabile a partire dal solo contesto della frase prodotta.
+
+La rilevanza di questi rischi per un dataset destinato al fine-tuning non si limita alla qualità percepita del singolo esempio generato: un modello allenato su dati contenenti sostituzioni sistematicamente errate rischia di apprendere associazioni scorrette tra forma linguistica e significato clinico, propagando l'errore oltre il singolo esempio da cui ha avuto origine. Per questa ragione, l'adozione di tecniche di augmentation basate su modelli linguistici richiede, più che nei casi in cui il vocabolario di dominio non sia critico, una fase di validazione esplicita dell'output prodotto, distinta dalla sola verifica di correttezza grammaticale o di fluenza superficiale della frase.
+
+Nel capitolo dedicato alla valutazione del dataset prodotto in questo lavoro (\cref{chap:evaluation}) sono documentati casi concreti riconducibili a entrambe le forme di errore appena descritte, insieme alla metodologia adottata per individuarli e alle correzioni apportate al sistema di generazione delle parafrasi.
+
+In sintesi, il presente lavoro si colloca in un punto specifico dello spettro delineato dai tre approcci discussi: automatico nella generazione della componente strutturata e nella parafrasi, come MK-SQuIT, ma dotato di un meccanismo di validazione esplicito e multilivello che né MK-SQuIT né, in forma diversa, IBM Research adottano nella medesima misura. I capitoli successivi descrivono nel dettaglio l'architettura adottata (\cref{chap:design}), la sua implementazione (\cref{chap:implementation}), e i risultati della validazione condotta sul dataset prodotto (\cref{chap:evaluation}).
+
+
+\chapter{Analysis}
+\label{chap:analysis}
+
+
+\section{High-level goals}
+
+\section{Constraints}
+
+\section{Functional and non-functional requirements}
+
+\section{Domain model}
+
+\chapter{Design}
+\label{chap:design}
+
+
+\section{Architecture}
+
+
+\section{Detailed design}
+
+\chapter{Implementation}
+\label{chap:implementation}
+
+\section{Technology stack}
+
+\section{Implementation highlights}
+
+\chapter{Evaluation}
+\label{chap:evaluation}
+
+\section{Methodology}
+
+\section{Quality issues found}
+
+\section{Dataset statistics}
+
+\chapter{Conclusion and Future Work}
+\label{chap:conclusion}
 
 \backmatter
 
-\nocite{*} % Remove this as soon as you have the first citation
 
 \bibliographystyle{alpha}
 \bibliography{bibliography}
 
-\begin{acknowledgements} % this is optional
-Optional. Max 1 page.
+\begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non la vuoi
+    % TODO: opzionale
 \end{acknowledgements}
 
 \end{document}
