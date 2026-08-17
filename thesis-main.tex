@@ -1,5 +1,6 @@
 \documentclass[12pt,a4paper,openright,twoside]{book}
 \usepackage[utf8]{inputenc}
+\usepackage{float}
 \usepackage{disi-thesis}
 \usepackage{code-lstlistings}
 \usepackage{notes}
@@ -8,7 +9,8 @@
 
 \school{\unibo}
 \programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
-\title{Generazione automatica di dataset text-to-SPARQL per fine-tuning di LLM su knowledge graph clinico-oncologico}
+\title{Generazione automatica di dataset text-to-SPARQL per fine-tuning di LLM su
+knowledge graph clinico-oncologico}
 \author{Matteo Tonelli}
 \date{\today}
 \subject{Programmazione}
@@ -53,29 +55,118 @@
 \chapter{Background}
 \label{chap:background}
 
-Un knowledge graph è una rappresentazione strutturata della conoscenza in cui le entità del dominio (pazienti, diagnosi, terapie, nel caso del Cancer Virtual Lab) sono modellate come nodi, e le relazioni tra esse come archi etichettati. Questa rappresentazione segue tipicamente il modello RDF (\emph{Resource Description Framework}), in cui ogni fatto è espresso come una tripla soggetto-predicato-oggetto, ad esempio un paziente collegato a una diagnosi tramite la relazione \texttt{has\_diagnosis}.
+Un knowledge graph è una rappresentazione strutturata della conoscenza in cui le entità
+del dominio (pazienti, diagnosi, terapie, nel caso del Cancer Virtual Lab) sono modellate
+come nodi, e le relazioni tra esse come archi etichettati. Questa rappresentazione segue
+tipicamente il modello RDF (\emph{Resource Description Framework}), in cui ogni fatto è
+espresso come una tripla soggetto-predicato-oggetto, ad esempio un paziente collegato a
+una diagnosi tramite la relazione \texttt{has\_diagnosis}.
 
-SPARQL è il linguaggio di interrogazione standard per dati RDF, analogo per ruolo a SQL nel contesto delle basi di dati relazionali. Una query SPARQL specifica un pattern di triple da individuare nel grafo, con la possibilità di applicare filtri sui valori e vincoli sulla struttura delle relazioni attraversate.
+SPARQL è il linguaggio di interrogazione standard per dati RDF, analogo per ruolo a SQL
+nel contesto delle basi di dati relazionali. Una query SPARQL specifica un pattern di
+triple da individuare nel grafo, con la possibilità di applicare filtri sui valori e
+vincoli sulla struttura delle relazioni attraversate.
 
-Il problema del text-to-SPARQL si inserisce in una famiglia più ampia di compiti noti in letteratura come semantic parsing, in cui un sistema deve tradurre un enunciato in linguaggio naturale in una rappresentazione formale eseguibile. Nel caso specifico del text-to-SQL e del text-to-SPARQL, la rappresentazione target è un linguaggio di interrogazione strutturato, e la difficoltà principale risiede nella necessità di colmare il divario tra la libertà espressiva del linguaggio naturale e la rigidità sintattica e semantica del linguaggio target. Un modello deve non solo comprendere l'intento della domanda, ma anche conoscere con precisione lo schema sottostante, ovvero i nomi delle entità, delle proprietà e delle relazioni disponibili, poiché un errore anche minimo nella scelta di un predicato produce una query sintatticamente valida ma semanticamente errata.
+Il problema del text-to-SPARQL si inserisce in una famiglia più ampia di compiti noti in
+letteratura come semantic parsing, in cui un sistema deve tradurre un enunciato in
+linguaggio naturale in una rappresentazione formale eseguibile. Nel caso specifico del
+text-to-SQL e del text-to-SPARQL, la rappresentazione target è un linguaggio di
+interrogazione strutturato, e la difficoltà principale risiede nella necessità di colmare
+il divario tra la libertà espressiva del linguaggio naturale e la rigidità sintattica e
+semantica del linguaggio target. Un modello deve non solo comprendere l'intento della
+domanda, ma anche conoscere con precisione lo schema sottostante, ovvero i nomi delle
+entità, delle proprietà e delle relazioni disponibili, poiché un errore anche minimo nella
+scelta di un predicato produce una query sintatticamente valida ma semanticamente errata.
 
-Nel dominio specifico del text-to-SPARQL su knowledge graph clinici, questa difficoltà è accentuata da due fattori. In primo luogo, lo schema è spesso altamente specialistico e non presente nella conoscenza pregressa di un modello linguistico generalista, che non ha modo di conoscere a priori l'esistenza di una proprietà come \texttt{has\_ECOG\_status} o di un'entità come \emph{Pathological TNM}. In secondo luogo, la scarsità di dati annotati è un problema ricorrente in ambito clinico, dove la produzione di coppie domanda-query richiede competenze di dominio che non tutti gli annotatori possiedono.
+Nel dominio specifico del text-to-SPARQL su knowledge graph clinici, questa difficoltà è
+accentuata da due fattori. In primo luogo, lo schema è spesso altamente specialistico e
+non presente nella conoscenza pregressa di un modello linguistico generalista, che non ha
+modo di conoscere a priori l'esistenza di una proprietà come \texttt{has\_ECOG\_status} o
+di un'entità come \emph{Pathological TNM}. In secondo luogo, la scarsità di dati annotati
+è un problema ricorrente in ambito clinico, dove la produzione di coppie domanda-query
+richiede competenze di dominio che non tutti gli annotatori possiedono.
 
-Diversi lavori in letteratura hanno affrontato il problema della costruzione di dataset per il text-to-SPARQL, adottando strategie differenti per generare la componente in linguaggio naturale a partire da query strutturate. LC-QuAD, nelle sue due versioni~\cite{lcquad1,lcquad2}, costruisce le domande a partire da template applicati al grafo, genera una domanda intermedia in linguaggio quasi naturale (NNQT, \emph{Normalized Natural Question Template}) e infine affida a annotatori umani, tramite piattaforme di crowdsourcing, la parafrasi finale in linguaggio naturale fluente, producendo una singola parafrasi per ciascuna domanda. MK-SQuIT~\cite{mksquit} adotta invece un approccio interamente automatico, generando sia la query sia la sua controparte testuale tramite una grammatica formale, senza alcuna fase di parafrasi successiva: la variabilità linguistica del dataset dipende quindi unicamente dalla ricchezza della grammatica stessa. Un lavoro più recente di IBM Research, condotto da Bulle Labate e colleghi~\cite{ibm2025}, applica invece un modello linguistico di grandi dimensioni per rigenerare le parafrasi delle domande già presenti in LC-QuAD, validando la qualità del risultato tramite un secondo modello linguistico nel ruolo di giudice, secondo cinque criteri valutati su una scala da uno a cinque.
+Diversi lavori in letteratura hanno affrontato il problema della costruzione di dataset
+per il text-to-SPARQL, adottando strategie differenti per generare la componente in
+linguaggio naturale a partire da query strutturate. LC-QuAD, nelle sue due
+versioni~\cite{lcquad1,lcquad2}, costruisce le domande a partire da template applicati al
+grafo, genera una domanda intermedia in linguaggio quasi naturale (NNQT, \emph{Normalized
+    Natural Question Template}) e infine affida a annotatori umani, tramite piattaforme di
+crowdsourcing, la parafrasi finale in linguaggio naturale fluente, producendo una singola
+parafrasi per ciascuna domanda. MK-SQuIT~\cite{mksquit} adotta invece un approccio
+interamente automatico, generando sia la query sia la sua controparte testuale tramite una
+grammatica formale, senza alcuna fase di parafrasi successiva: la variabilità linguistica
+del dataset dipende quindi unicamente dalla ricchezza della grammatica stessa. Un lavoro
+più recente di IBM Research, condotto da Bulle Labate e colleghi~\cite{ibm2025}, applica
+invece un modello linguistico di grandi dimensioni per rigenerare le parafrasi delle
+domande già presenti in LC-QuAD, validando la qualità del risultato tramite un secondo
+modello linguistico nel ruolo di giudice, secondo cinque criteri valutati su una scala da
+uno a cinque.
 
-Questi tre lavori delineano uno spettro di possibili approcci: da un estremo interamente manuale nella fase di parafrasi, a un estremo interamente automatico privo di parafrasi, fino a un approccio ibrido in cui l'automazione tramite modello linguistico sostituisce l'annotatore umano pur mantenendo una fase di parafrasi esplicita. L'utilizzo di modelli linguistici per l'augmentation testuale non è tuttavia privo di rischi, in particolare quando applicato a domini con vocabolario controllato: un modello può introdurre sinonimi lessicalmente plausibili ma semanticamente non equivalenti al termine originale, alterando il significato clinico di un valore senza che questo risulti evidente da un controllo superficiale del testo prodotto.
+Questi tre lavori delineano uno spettro di possibili approcci: da un estremo interamente
+manuale nella fase di parafrasi, a un estremo interamente automatico privo di parafrasi,
+fino a un approccio ibrido in cui l'automazione tramite modello linguistico sostituisce
+l'annotatore umano pur mantenendo una fase di parafrasi esplicita. L'utilizzo di modelli
+linguistici per l'augmentation testuale non è tuttavia privo di rischi, in particolare
+quando applicato a domini con vocabolario controllato: un modello può introdurre sinonimi
+lessicalmente plausibili ma semanticamente non equivalenti al termine originale, alterando
+il significato clinico di un valore senza che questo risulti evidente da un controllo
+superficiale del testo prodotto.
 
-Il lavoro descritto in questa tesi si colloca in prossimità dell'estremo automatico dello spettro appena descritto, condividendo con MK-SQuIT l'assenza di annotazione umana nella fase di parafrasi, ma introducendo, a differenza di quest'ultimo, una fase di validazione programmatica multilivello sull'output del modello linguistico, distinta sia dall'approccio di IBM Research, che affida la validazione a un secondo modello linguistico, sia dall'assenza di validazione esplicita in MK-SQuIT.
+Il lavoro descritto in questa tesi si colloca in prossimità dell'estremo automatico dello
+spettro appena descritto, condividendo con MK-SQuIT l'assenza di annotazione umana nella
+fase di parafrasi, ma introducendo, a differenza di quest'ultimo, una fase di validazione
+programmatica multilivello sull'output del modello linguistico, distinta sia
+dall'approccio di IBM Research, che affida la validazione a un secondo modello
+linguistico, sia dall'assenza di validazione esplicita in MK-SQuIT.
 
-Le tecniche di augmentation testuale basate su modelli linguistici di grandi dimensioni si sono affermate come alternativa alla parafrasi manuale in numerosi compiti di elaborazione del linguaggio naturale, sfruttando la capacità di questi modelli di produrre riformulazioni fluenti e grammaticalmente corrette a partire da un testo sorgente. Rispetto a tecniche più risalenti, come la sostituzione di sinonimi tramite risorse lessicali statiche o la back-translation attraverso un sistema di traduzione automatica, un modello linguistico generativo consente una variazione più ampia nella struttura sintattica e nel registro della frase prodotta, non limitandosi alla sola sostituzione lessicale.
+Le tecniche di augmentation testuale basate su modelli linguistici di grandi dimensioni si
+sono affermate come alternativa alla parafrasi manuale in numerosi compiti di elaborazione
+del linguaggio naturale, sfruttando la capacità di questi modelli di produrre
+riformulazioni fluenti e grammaticalmente corrette a partire da un testo sorgente.
+Rispetto a tecniche più risalenti, come la sostituzione di sinonimi tramite risorse
+lessicali statiche o la back-translation attraverso un sistema di traduzione automatica,
+un modello linguistico generativo consente una variazione più ampia nella struttura
+sintattica e nel registro della frase prodotta, non limitandosi alla sola sostituzione
+lessicale.
 
-Questa flessibilità comporta tuttavia un rischio strutturale, distinto dal semplice errore casuale: un modello linguistico generalista non possiede, per costruzione, conoscenza affidabile di vocabolari controllati specifici di un dominio, quali codici di classificazione clinica, terminologie normalizzate, o distinzioni concettuali che a un lettore non esperto del dominio possono apparire equivalenti pur non essendolo. Nel richiedere una parafrasi o un sinonimo per un termine di questo tipo, il modello può produrre un'alternativa lessicalmente plausibile ma semanticamente non equivalente, senza segnalare in alcun modo l'incertezza sottostante. Questo comportamento si manifesta tipicamente in due forme distinte. La prima è la sostituzione di un termine tecnico con un termine di registro comune tratto da un dominio concettualmente adiacente ma distinto, che altera il contesto interpretativo del valore pur mantenendone una plausibilità superficiale. La seconda, più marcata, è l'allucinazione vera e propria, in cui il modello associa a un codice o a un identificativo privo di significato lessicale intrinseco un'interpretazione testuale inventata, spesso non verificabile a partire dal solo contesto della frase prodotta.
+Questa flessibilità comporta tuttavia un rischio strutturale, distinto dal semplice errore
+casuale: un modello linguistico generalista non possiede, per costruzione, conoscenza
+affidabile di vocabolari controllati specifici di un dominio, quali codici di
+classificazione clinica, terminologie normalizzate, o distinzioni concettuali che a un
+lettore non esperto del dominio possono apparire equivalenti pur non essendolo. Nel
+richiedere una parafrasi o un sinonimo per un termine di questo tipo, il modello può
+produrre un'alternativa lessicalmente plausibile ma semanticamente non equivalente, senza
+segnalare in alcun modo l'incertezza sottostante. Questo comportamento si manifesta
+tipicamente in due forme distinte. La prima è la sostituzione di un termine tecnico con un
+termine di registro comune tratto da un dominio concettualmente adiacente ma distinto, che
+altera il contesto interpretativo del valore pur mantenendone una plausibilità
+superficiale. La seconda, più marcata, è l'allucinazione vera e propria, in cui il modello
+associa a un codice o a un identificativo privo di significato lessicale intrinseco
+un'interpretazione testuale inventata, spesso non verificabile a partire dal solo contesto
+della frase prodotta.
 
-La rilevanza di questi rischi per un dataset destinato al fine-tuning non si limita alla qualità percepita del singolo esempio generato: un modello allenato su dati contenenti sostituzioni sistematicamente errate rischia di apprendere associazioni scorrette tra forma linguistica e significato clinico, propagando l'errore oltre il singolo esempio da cui ha avuto origine. Per questa ragione, l'adozione di tecniche di augmentation basate su modelli linguistici richiede, più che nei casi in cui il vocabolario di dominio non sia critico, una fase di validazione esplicita dell'output prodotto, distinta dalla sola verifica di correttezza grammaticale o di fluenza superficiale della frase.
+La rilevanza di questi rischi per un dataset destinato al fine-tuning non si limita alla
+qualità percepita del singolo esempio generato: un modello allenato su dati contenenti
+sostituzioni sistematicamente errate rischia di apprendere associazioni scorrette tra
+forma linguistica e significato clinico, propagando l'errore oltre il singolo esempio da
+cui ha avuto origine. Per questa ragione, l'adozione di tecniche di augmentation basate su
+modelli linguistici richiede, più che nei casi in cui il vocabolario di dominio non sia
+critico, una fase di validazione esplicita dell'output prodotto, distinta dalla sola
+verifica di correttezza grammaticale o di fluenza superficiale della frase.
 
-Nel capitolo dedicato alla valutazione del dataset prodotto in questo lavoro (\cref{chap:evaluation}) sono documentati casi concreti riconducibili a entrambe le forme di errore appena descritte, insieme alla metodologia adottata per individuarli e alle correzioni apportate al sistema di generazione delle parafrasi.
+Nel capitolo dedicato alla valutazione del dataset prodotto in questo lavoro
+(\cref{chap:evaluation}) sono documentati casi concreti riconducibili a entrambe le forme
+di errore appena descritte, insieme alla metodologia adottata per individuarli e alle
+correzioni apportate al sistema di generazione delle parafrasi.
 
-In sintesi, il presente lavoro si colloca in un punto specifico dello spettro delineato dai tre approcci discussi: automatico nella generazione della componente strutturata e nella parafrasi, come MK-SQuIT, ma dotato di un meccanismo di validazione esplicito e multilivello che né MK-SQuIT né, in forma diversa, IBM Research adottano nella medesima misura. I capitoli successivi descrivono nel dettaglio l'architettura adottata (\cref{chap:design}), la sua implementazione (\cref{chap:implementation}), e i risultati della validazione condotta sul dataset prodotto (\cref{chap:evaluation}).
+In sintesi, il presente lavoro si colloca in un punto specifico dello spettro delineato
+dai tre approcci discussi: automatico nella generazione della componente strutturata e
+nella parafrasi, come MK-SQuIT, ma dotato di un meccanismo di validazione esplicito e
+multilivello che né MK-SQuIT né, in forma diversa, IBM Research adottano nella medesima
+misura. I capitoli successivi descrivono nel dettaglio l'architettura adottata
+(\cref{chap:design}), la sua implementazione (\cref{chap:implementation}), e i risultati
+della validazione condotta sul dataset prodotto (\cref{chap:evaluation}).
 
 
 \chapter{Analysis}
@@ -84,12 +175,119 @@ In sintesi, il presente lavoro si colloca in un punto specifico dello spettro de
 
 \section{High-level goals}
 
+L'obiettivo primario del progetto è la costruzione di un dataset annotato per il
+fine-tuning di un modello linguistico di dimensioni contenute, destinato alla traduzione
+di domande in linguaggio naturale in query SPARQL sul knowledge graph del Cancer Virtual
+Lab. Da questo obiettivo generale derivano quattro obiettivi più specifici, che hanno
+guidato le scelte progettuali descritte nei capitoli successivi.
+
+Il primo obiettivo è la copertura di un sottoinsieme rappresentativo dello schema del
+knowledge graph, comprendente quarantacinque entità selezionate e organizzate in sei
+livelli di priorità, con una distribuzione del volume di dati deliberatamente non uniforme
+tra i livelli, orientata verso le entità cliniche di uso più frequente nel contesto
+applicativo. Il sistema di generazione è progettato per essere estendibile a porzioni
+ulteriori dello schema, non ancora coperte nella versione attuale del dataset. Il secondo
+obiettivo è la produzione di varietà linguistica autentica nelle domande generate,
+attraverso dieci registri stilistici distinti, senza che questa varietà comprometta la
+correttezza semantica del testo prodotto rispetto alla query sottostante. Il terzo
+obiettivo è la tracciabilità completa: ogni frase generata deve essere riconducibile in
+modo univoco e verificabile alla query SPARQL che la genera, condizione necessaria per un
+utilizzo affidabile come dato di addestramento supervisionato. Il quarto obiettivo è la
+produzione di un volume di dati sufficiente per un fine-tuning efficiente in termini di
+risorse computazionali, applicato a un modello linguistico di dimensioni contenute. Le
+tecniche specifiche adottate per il fine-tuning sono descritte nel capitolo dedicato
+all'implementazione. Il quinto obiettivo è la validazione sistematica della correttezza
+semantica delle varianti prodotte, attraverso un processo di controllo qualità in grado di
+individuare alterazioni non intenzionali del significato clinico introdotte dal meccanismo
+di generazione linguistica.
+
 \section{Constraints}
+
+Il progetto è stato condotto sotto un insieme di vincoli tecnici e organizzativi che ne
+hanno influenzato le scelte architetturali, descritte nel dettaglio nei capitoli
+successivi.
+
+Sul piano tecnico, la fase di augmentation testuale si basa su un modello linguistico
+eseguito localmente, scelta motivata dall'assenza di dipendenza da servizi esterni a
+pagamento e dal controllo diretto sui tempi di esecuzione, a fronte di una minore capacità
+del modello rispetto a soluzioni commerciali di dimensioni maggiori.
+
+L'infrastruttura di calcolo disponibile è variata nel corso del progetto: alcune fasi di
+sviluppo sono state condotte in assenza di accelerazione grafica dedicata, con tempi di
+generazione dell'ordine dei minuti per singola frase; in una fase successiva si è resa
+disponibile una scheda grafica di fascia consumer con memoria video limitata, sufficiente
+per la sola fase di augmentation ma non per il fine-tuning del modello; la fase di
+fine-tuning vera e propria richiede infine l'accesso a un cluster di calcolo condiviso, con
+tempi di attesa in coda non prevedibili a priori. Le scelte tecnologiche specifiche
+adottate per ciascuna fase sono descritte nel capitolo dedicato all'implementazione.
+
+Un vincolo di natura organizzativa è rappresentato dalla scadenza dell'appello di laurea,
+che ha imposto una pianificazione del lavoro orientata a garantire la disponibilità di un
+dataset completo e validato con margine sufficiente rispetto alla fase di fine-tuning e
+stesura finale del documento.
 
 \section{Functional and non-functional requirements}
 
+I requisiti funzionali del sistema sono i seguenti. Il sistema deve generare coppie
+costituite da una query SPARQL sintatticamente valida e da un prompt in linguaggio
+naturale corrispondente, a partire dallo schema del knowledge graph. Il sistema deve
+produrre, per ciascuna coppia generata, un numero variabile di varianti parafrasate del
+medesimo prompt, preservando invariata la query associata. Il sistema deve garantire la
+preservazione esatta dei valori letterali presenti nella query, quali identificativi di
+pazienti, codici di classificazione clinica, e date, in ciascuna variante parafrasata
+prodotta. Il sistema deve inoltre supportare la generazione di query di complessità
+variabile, dal caso di un singolo vincolo su una singola proprietà fino a query che
+attraversano più relazioni e combinano più vincoli sullo stesso nodo.
+
+I requisiti non funzionali riguardano invece proprietà trasversali del sistema, non
+direttamente osservabili nel singolo output prodotto. Il sistema deve mantenere un
+throughput di generazione compatibile con i tempi disponibili per il progetto, tenendo
+conto delle differenti infrastrutture di calcolo utilizzate nelle diverse fasi. Il sistema
+deve garantire un tasso di accettazione delle generazioni, inteso come rapporto tra
+varianti prodotte con successo e tentativi complessivi, sufficientemente elevato da
+rendere il processo economicamente sostenibile in termini di tempo di calcolo. Il sistema
+deve essere riproducibile in caso di interruzione, ovvero in grado di riprendere una
+generazione interrotta senza ripetere il lavoro già completato. Infine, il sistema deve
+essere robusto rispetto a un rischio specifico del dominio applicativo, ovvero la
+possibilità che il meccanismo di variazione linguistica alteri, senza segnalarlo, il
+significato di un valore clinico controllato.
+
 \section{Domain model}
 
+Il modello di dominio adottato in questo progetto non coincide con l'intero schema del
+knowledge graph del Cancer Virtual Lab, ma con un sottoinsieme di quarantacinque entità,
+selezionate e organizzate in sei livelli di priorità denominati Tier 0 e Tier da A a E.
+Questa organizzazione a livelli non riflette una proprietà intrinseca dello schema, bensì
+una decisione progettuale: il sistema di generazione è stato costruito in modo scalabile,
+e la scelta di quali entità includere e con quale peso relativo è stata guidata dalla
+necessità di produrre un volume di dati sbilanciato verso le entità cliniche più
+frequentemente interrogate nel contesto applicativo del Cancer Virtual Lab, piuttosto che
+verso una copertura uniforme dell'intero schema.
+
+Il Tier 0 comprende la sola entità Patient, nodo centrale dello schema. Il Tier A
+comprende undici entità cliniche direttamente collegate al paziente, quali Diagnosis e
+Therapy. Il Tier B comprende sei entità raggiungibili con due passaggi relazionali dal
+paziente. I Tier C, D ed E comprendono rispettivamente tre, undici e tredici entità più
+periferiche, relative a sostanze attive ed eventi avversi, sintomi e fattori di stile di
+vita, e classificazioni astratte quali le componenti della stadiazione \ac{TNM}. Il numero
+di record generati per ciascun tier decresce progressivamente da Tier 0 a Tier E,
+riflettendo la priorità decrescente assegnata alle rispettive entità.
+
+Per ciascuna entità, la complessità delle query generabili è controllata da quattro
+parametri: il numero di relazioni attraversate nel grafo a partire dal nodo radice, il
+numero di percorsi alternativi combinati nella medesima query tramite clausole di
+disgiunzione, il numero di proprietà vincolate su un medesimo nodo, e il numero di valori
+ammessi per ciascun vincolo. La combinazione di questi quattro parametri, differenziata
+per ciascun tier, determina la distribuzione di complessità delle query nel dataset
+finale, ed è descritta nel dettaglio nel capitolo dedicato al design del sistema di
+generazione.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.8\linewidth]{figures/domain-model-tiers.pdf}
+    \caption{Modello di dominio semplificato, con alcune entità rappresentative}
+    \label{fig:domain-model}
+\end{figure}
 \chapter{Design}
 \label{chap:design}
 
@@ -103,6 +301,18 @@ In sintesi, il presente lavoro si colloca in un punto specifico dello spettro de
 \label{chap:implementation}
 
 \section{Technology stack}
+
+La fase di augmentation testuale si basa su Ollama, uno strumento per l'esecuzione locale di
+modelli linguistici, che consente di eseguire il modello impiegato senza dipendenza da
+servizi esterni a pagamento.
+
+L'infrastruttura di calcolo utilizzata è variata nel corso del progetto, in linea con i
+vincoli discussi nel capitolo di analisi. Le prime fasi di sviluppo sono state condotte su
+una macchina priva di accelerazione grafica dedicata. Una fase successiva ha fatto uso di
+una scheda grafica NVIDIA GeForce GTX 1650, con quattro gigabyte di memoria video,
+sufficiente per la fase di augmentation ma non per il fine-tuning del modello. La fase di
+fine-tuning richiede infine l'accesso al cluster \ac{HPC} del DISI, con partizioni dotate di
+\ac{GPU} NVIDIA RTX 2080 e L40.
 
 \section{Implementation highlights}
 
