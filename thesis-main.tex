@@ -81,28 +81,29 @@ Da questo obiettivo generale derivano quattro obiettivi più specifici, che hann
 guidato le scelte progettuali descritte nei capitoli successivi.
 
 \begin{itemize}
-    \item[\textbf{O1}]\label{obj:O1} \textit{Copertura selettiva ed estendibilità}. Il dataset deve
-          coprire le parti dello schema del knowledge graph più rilevanti per
-          l'applicazione, senza richiedere la copertura completa dello schema.
-          Il sistema deve inoltre permettere di estendere progressivamente questa
-          copertura aggiungendo nuove classi e relazioni, senza richiedere una
-          riprogettazione del generatore.
+    \item[\textbf{O1}]\label{obj:O1} \textit{Copertura selettiva ed
+              estendibilità}. Il dataset deve coprire le parti dello schema del
+          knowledge graph più rilevanti per l'applicazione, senza richiedere la
+          copertura completa dello schema. Il sistema deve inoltre permettere di
+          estendere progressivamente questa copertura aggiungendo nuove classi e
+          relazioni, senza richiedere una riprogettazione del generatore.
 
-    \item[\textbf{O2}]\label{obj:O2} \textit{Varietà linguistica autentica}. Le domande generate
-          devono presentare una varietà linguistica sufficiente a evitare
-          formulazioni ripetitive o riconducibili a un unico template, mantenendo
-          invariato il significato espresso dalla query sottostante.
+    \item[\textbf{O2}]\label{obj:O2} \textit{Varietà linguistica autentica}. Le
+          domande generate devono presentare una varietà linguistica sufficiente
+          a evitare formulazioni ripetitive o riconducibili a un unico template,
+          mantenendo invariato il significato espresso dalla query sottostante.
 
-    \item[\textbf{O3}]\label{obj:O3} \textit{Tracciabilità completa}. Ogni domanda generata deve
-          essere associata in modo univoco alla query SPARQL da cui deriva.
-          L'associazione tra domanda e query deve essere quindi conservata
-          esplicitamente, così da rendere verificabile ogni coppia utilizzata
-          nel dataset.
+    \item[\textbf{O3}]\label{obj:O3} \textit{Tracciabilità completa}. Ogni
+          domanda generata deve essere associata in modo univoco alla query
+          SPARQL da cui deriva. L'associazione tra domanda e query deve essere
+          quindi conservata esplicitamente, così da rendere verificabile ogni
+          coppia utilizzata nel dataset.
 
-    \item[\textbf{O4}]\label{obj:O4} \textit{Volume di dati adeguato al fine-tuning}. Il dataset deve
-          contenere un numero di esempi sufficiente per supportare il fine-tuning
-          del modello linguistico considerato e deve garantire una copertura
-          adeguata delle diverse tipologie di query previste.
+    \item[\textbf{O4}]\label{obj:O4} \textit{Volume di dati adeguato al
+              fine-tuning}. Il dataset deve contenere un numero di esempi
+          sufficiente per supportare il fine-tuning del modello linguistico
+          considerato e deve garantire una copertura adeguata delle diverse
+          tipologie di query previste.
 
 \end{itemize}
 
@@ -113,27 +114,29 @@ influenzato le scelte architetturali, descritte nel dettaglio nei capitoli
 successivi.
 
 \begin{itemize}
-    \item[\textbf{V1}]\label{vinc:V1} \textit{Compatibilità con uno schema esistente e non
-              modificabile}. Il sistema deve generare query conformi allo schema
-          dell'ontologia del Cancer Virtual Lab, preesistente al progetto e
-          non alterabile nel suo ambito. Nomi di classi, proprietà e
-          relazioni sono vincoli esterni, non negoziabili in funzione di una
-          generazione più semplice o di una copertura più ampia.
+    \item[\textbf{V1}]\label{vinc:V1} \textit{Compatibilità con uno schema
+              esistente e non modificabile}. Il sistema deve generare query
+          conformi allo schema dell'ontologia del Cancer Virtual Lab,
+          preesistente al progetto e non alterabile nel suo ambito. Nomi di
+          classi, proprietà e relazioni sono vincoli esterni, non
+          negoziabili in funzione di una generazione più semplice o di una
+          copertura più ampia.
 
-    \item[\textbf{V2}]\label{vinc:V2} \textit{Trattamento di dati clinici sensibili}. I valori
-          coinvolti nelle query come identificativi di pazienti, codici di
-          classificazione clinica o date sono dati clinici il cui significato
-          deve rimanere verificabile e inalterato in ogni fase del processo.
-          Questo vincolo esclude, inoltre, l'invio di tali dati a servizi
-          esterni non controllati, imponendo l'esecuzione locale di qualunque
-          componente del sistema che vi acceda.
+    \item[\textbf{V2}]\label{vinc:V2} \textit{Trattamento di dati clinici
+              sensibili}. I valori coinvolti nelle query come identificativi di
+          pazienti, codici di classificazione clinica o date sono dati clinici
+          il cui significato deve rimanere verificabile e inalterato in ogni
+          fase del processo. Questo vincolo esclude, inoltre, l'invio di tali
+          dati a servizi esterni non controllati, imponendo l'esecuzione locale
+          di qualunque componente del sistema che vi acceda.
 
-    \item[\textbf{V3}]\label{vinc:V3} \textit{Capacità limitata del modello linguistico
-              impiegato}. A causa del vincolo sull'esecuzione locale imposto da
-          \hyperref[vinc:V2]{V2}, il sistema potrà sfruttare solo modelli di dimensioni molto
-          contenute, non potendo quindi fare affidamento sulla correttezza
-          semantica spontanea dell'output prodotto, e richiede un meccanismo
-          di validazione esplicito e indipendente dal modello stesso.
+    \item[\textbf{V3}]\label{vinc:V3} \textit{Capacità limitata del modello
+              linguistico impiegato}. A causa del vincolo sull'esecuzione locale
+          imposto da \hyperref[vinc:V2]{V2}, il sistema potrà sfruttare solo
+          modelli di dimensioni molto contenute, non potendo quindi fare
+          affidamento sulla correttezza semantica spontanea dell'output
+          prodotto, e richiede un meccanismo di validazione esplicito e
+          indipendente dal modello stesso.
 \end{itemize}
 
 \section{Requisiti funzionali}
@@ -142,26 +145,27 @@ I requisiti funzionali descrivono cosa il sistema deve produrre,
 indipendentemente da come tale produzione venga realizzata.
 
 \begin{itemize}
-    \item[\textbf{RF1}]\label{rf:RF1} \textit{Generazione di coppie prompt-query}. Il sistema
-          deve generare coppie costituite da una query SPARQL sintatticamente
-          valida e da un prompt in linguaggio naturale corrispondente, a partire
-          dallo schema del knowledge graph.
+    \item[\textbf{RF1}]\label{rf:RF1} \textit{Generazione di coppie
+              prompt-query}. Il sistema deve generare coppie costituite da una query
+          SPARQL sintatticamente valida e da un prompt in linguaggio naturale
+          corrispondente, a partire dallo schema del knowledge graph.
 
-    \item[\textbf{RF2}]\label{rf:RF2} \textit{Produzione di varianti multiple}. Il sistema
-          deve produrre, per ciascuna coppia generata, un numero variabile di
-          varianti parafrasate del medesimo prompt, preservando invariata la
-          query associata.
+    \item[\textbf{RF2}]\label{rf:RF2} \textit{Produzione di varianti multiple}.
+          Il sistema deve produrre, per ciascuna coppia generata, un numero
+          variabile di varianti parafrasate del medesimo prompt, preservando
+          invariata la query associata.
 
-    \item[\textbf{RF3}]\label{rf:RF3} \textit{Preservazione dei valori letterali}. Il sistema
-          deve garantire, in ciascuna variante parafrasata, la presenza dei
-          valori letterali presenti nella query, quali identificativi di
-          pazienti, codici di classificazione clinica o date, nella loro forma
-          esatta o in una forma alternativa verificabile.
+    \item[\textbf{RF3}]\label{rf:RF3} \textit{Preservazione dei valori
+              letterali}. Il sistema deve garantire, in ciascuna variante
+          parafrasata, la presenza dei valori letterali presenti nella query,
+          quali identificativi di pazienti, codici di classificazione clinica o
+          date, nella loro forma esatta o in una forma alternativa verificabile.
 
-    \item[\textbf{RF4}]\label{rf:RF4} \textit{Complessità variabile delle query}. Il sistema
-          deve supportare la generazione di query di complessità variabile, dal
-          caso di un singolo vincolo su una singola proprietà fino a query che
-          attraversano più relazioni e combinano più vincoli sullo stesso nodo.
+    \item[\textbf{RF4}]\label{rf:RF4} \textit{Complessità variabile delle
+              query}. Il sistema deve supportare la generazione di query di
+          complessità variabile, dal caso di un singolo vincolo su una singola
+          proprietà fino a query che attraversano più relazioni e combinano più
+          vincoli sullo stesso nodo.
 \end{itemize}
 
 \section{Requisiti non funzionali}
@@ -170,24 +174,25 @@ I requisiti non funzionali riguardano invece proprietà trasversali del sistema,
 non direttamente osservabili nel singolo output prodotto.
 
 \begin{itemize}
-    \item[\textbf{RNF1}]\label{rnf:RNF1} \textit{Sostenibilità computazionale}. Il sistema deve
-          garantire un tasso di accettazione delle generazioni sufficientemente
-          elevato da rendere il processo economicamente sostenibile in termini
-          di tempo di calcolo.
+    \item[\textbf{RNF1}]\label{rnf:RNF1} \textit{Sostenibilità computazionale}.
+          Il sistema deve garantire un tasso di accettazione delle generazioni
+          sufficientemente elevato da rendere il processo economicamente
+          sostenibile in termini di tempo di calcolo.
 
-    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Riproducibilità in caso di interruzione}. Il
-          sistema deve essere in grado di riprendere una generazione interrotta
-          senza ripetere il lavoro già completato.
+    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Riproducibilità in caso di
+              interruzione}. Il sistema deve essere in grado di riprendere una
+          generazione interrotta senza ripetere il lavoro già completato.
 
-    \item[\textbf{RNF3}]\label{rnf:RNF3} \textit{Robustezza semantica}. Il sistema deve
-          limitare il rischio che la variazione linguistica modifichi,
-          senza rilevarlo, il significato della domanda rispetto alla query
-          sottostante, con particolare attenzione ai valori clinici controllati.
+    \item[\textbf{RNF3}]\label{rnf:RNF3} \textit{Robustezza semantica}. Il
+          sistema deve limitare il rischio che la variazione linguistica
+          modifichi, senza rilevarlo, il significato della domanda rispetto alla
+          query sottostante, con particolare attenzione ai valori clinici
+          controllati.
 \end{itemize}
 
 \textit{\\\textbf{Nota}
-    La robustezza semantica riguarda quindi la fedeltà del contenuto,
-    mentre la tracciabilità di \hyperref[obj:O3]{O3} riguarda la provenienza e
+    La robustezza semantica riguarda quindi la fedeltà del contenuto, mentre la
+    tracciabilità di \hyperref[obj:O3]{O3} riguarda la provenienza e
     l'associazione tra testo e query.}
 
 \chapter{Progettazione}
@@ -195,52 +200,56 @@ non direttamente osservabili nel singolo output prodotto.
 
 \section{Analisi dei problemi}
 
-I requisiti e i vincoli descritti nel capitolo precedente si traducono
-in tre sotto-problemi progettuali distinti, la cui interazione determina la
-difficoltà complessiva del compito. La distinzione è utile perché consente di
-separare le difficoltà legate alla costruzione delle query da quelle introdotte
-dalla variazione linguistica e, infine, dalla necessità di verificare gli output
+I requisiti e i vincoli descritti nel capitolo precedente si traducono in tre
+sotto-problemi progettuali distinti, la cui interazione determina la difficoltà
+complessiva del compito. La distinzione è utile perché consente di separare le
+difficoltà legate alla costruzione delle query da quelle introdotte dalla
+variazione linguistica e, infine, dalla necessità di verificare gli output
 prodotti.
 
 \begin{itemize}
-    \item[\textbf{P1}]\label{prob:P1} \textit{Sotto-problema combinatorio}. Dato lo schema del
-          knowledge graph, generare query SPARQL sintatticamente corrette che
-          coprano una distribuzione rappresentativa dell'uso reale del sistema,
-          senza produrre un numero di combinazioni non gestibile nei tempi o
-          eccessivo per un corretto fine-tuning.
+    \item[\textbf{P1}]\label{prob:P1} \textit{Sotto-problema combinatorio}. Dato
+          lo schema del knowledge graph, generare query SPARQL sintatticamente
+          corrette che coprano una distribuzione rappresentativa dell'uso reale
+          del sistema, senza produrre un numero di combinazioni non gestibile
+          nei tempi o eccessivo per un corretto fine-tuning.
 
-    \item[\textbf{P2}]\label{prob:P2} \textit{Sotto-problema linguistico}. Dato un prompt in
-          forma template privo di variazione, generare un numero variabile di
-          parafrasi che siano al tempo stesso fluenti in linguaggio naturale e
-          fedeli al contenuto semantico della query sottostante. A differenza di
-          \hyperref[prob:P1]{P1}, qui la difficoltà non risiede nella dimensione dello spazio delle
-          soluzioni possibili, ma nell'assenza di un criterio puramente formale
-          per distinguere una parafrasi corretta da una scorretta. Una parafrasi
-          può infatti essere grammaticalmente ineccepibile e superare ogni
-          controllo meccanico applicabile, e tuttavia alterare il significato
-          della domanda originale.
+    \item[\textbf{P2}]\label{prob:P2} \textit{Sotto-problema linguistico}. Dato
+          un prompt in forma template privo di variazione, generare un numero
+          variabile di parafrasi che siano al tempo stesso fluenti in linguaggio
+          naturale e fedeli al contenuto semantico della query sottostante. A
+          differenza di \hyperref[prob:P1]{P1}, qui la difficoltà non risiede
+          nella dimensione dello spazio delle soluzioni possibili, ma
+          nell'assenza di un criterio puramente formale per distinguere una
+          parafrasi corretta da una scorretta. Una parafrasi può infatti essere
+          grammaticalmente ineccepibile e superare ogni controllo meccanico
+          applicabile, e tuttavia alterare il significato della domanda
+          originale.
 
-    \item[\textbf{P3}]\label{prob:P3} \textit{Sotto-problema di validazione}. Distinto da \hyperref[prob:P1]{P1} e
-          \hyperref[prob:P2]{P2} ma dipendente da entrambi: verificare, per ciascuna variante
-          generata, che la relazione con la query associata sia corretta e che
-          il contenuto semantico non sia stato alterato durante la variazione
-          linguistica. La tracciabilità richiesta da \hyperref[obj:O3]{O3} è una proprietà
-          verificabile della provenienza del dato; la robustezza semantica di
-          \hyperref[rnf:RNF3]{RNF3} introduce invece una difficoltà ulteriore, poiché non esiste un
-          criterio puramente formale che stabilisca con certezza l'equivalenza
-          tra una formulazione in linguaggio naturale e la rappresentazione
-          SPARQL sottostante. P3 è quindi il punto in cui la pipeline deve
-          combinare controlli strutturali e semantici, ed è discusso nel
-          dettaglio nel capitolo di valutazione.
+    \item[\textbf{P3}]\label{prob:P3} \textit{Sotto-problema di validazione}.
+          Distinto da \hyperref[prob:P1]{P1} e \hyperref[prob:P2]{P2} ma
+          dipendente da entrambi: verificare, per ciascuna variante generata,
+          che la relazione con la query associata sia corretta e che il
+          contenuto semantico non sia stato alterato durante la variazione
+          linguistica. La tracciabilità richiesta da \hyperref[obj:O3]{O3} è una
+          proprietà verificabile della provenienza del dato; la robustezza
+          semantica di \hyperref[rnf:RNF3]{RNF3} introduce invece una difficoltà
+          ulteriore, poiché non esiste un criterio puramente formale che
+          stabilisca con certezza l'equivalenza tra una formulazione in
+          linguaggio naturale e la rappresentazione SPARQL sottostante. P3 è
+          quindi il punto in cui la pipeline deve combinare controlli
+          strutturali e semantici, ed è discusso nel dettaglio nel capitolo di
+          valutazione.
 \end{itemize}
 
-I tre sotto-problemi individuati nell'analisi vengono affrontati da
-componenti distinti della pipeline. \hyperref[prob:P1]{P1} è affrontato attraverso il generatore
-parametrico di query, che consente di controllare lo spazio delle
-configurazioni esplorate. \hyperref[prob:P2]{P2} è affrontato attraverso la fase di augmentation
-linguistica, progettata per produrre formulazioni diverse a partire dalla
-medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di validazione, che verifica gli
-output prodotti dalle fasi precedenti prima del loro inserimento nel dataset.
+I tre sotto-problemi individuati nell'analisi vengono affrontati da componenti
+distinti della pipeline. \hyperref[prob:P1]{P1} è affrontato attraverso il
+generatore parametrico di query, che consente di controllare lo spazio delle
+configurazioni esplorate. \hyperref[prob:P2]{P2} è affrontato attraverso la fase
+di augmentation linguistica, progettata per produrre formulazioni diverse a
+partire dalla medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di
+validazione, che verifica gli output prodotti dalle fasi precedenti prima del
+loro inserimento nel dataset.
 
 \section{Design del generatore}
 
@@ -277,18 +286,18 @@ non solo rispetto alla rilevanza clinica, ma anche rispetto alla difficoltà
 attesa della domanda-tipo associata a ciascuna classe.
 
 L'assenza di un simile criterio di priorizzazione avrebbe comportato conseguenze
-dirette sul dataset prodotto, discusse in relazione a \hyperref[obj:O4]{O4} nel capitolo di
-analisi. Trattando le quarantacinque classi come equivalenti, il sistema avrebbe
-allocato un budget di generazione identico a ciascuna, indipendentemente dalla
-sua centralità nel dominio clinico. Classi concettualmente centrali, quali
-Patient, Diagnosis e Therapy, avrebbero ricevuto una rappresentazione
-insufficiente rispetto alla frequenza con cui compaiono nell'uso reale, mentre
-classi periferiche e altamente granulari, quali le singole categorie della
-classificazione TNM, avrebbero prodotto un numero di esempi ridondante rispetto
-alla loro effettiva rilevanza. Il risultato atteso di un simile sbilanciamento
-non sarebbe stato un dataset semplicemente meno efficiente, ma un modello
-allenato su di esso incline a generalizzare peggio proprio sulle categorie di
-domande più frequenti nell'uso previsto del sistema.
+dirette sul dataset prodotto, discusse in relazione a \hyperref[obj:O4]{O4} nel
+capitolo di analisi. Trattando le quarantacinque classi come equivalenti, il
+sistema avrebbe allocato un budget di generazione identico a ciascuna,
+indipendentemente dalla sua centralità nel dominio clinico. Classi
+concettualmente centrali, quali Patient, Diagnosis e Therapy, avrebbero ricevuto
+una rappresentazione insufficiente rispetto alla frequenza con cui compaiono
+nell'uso reale, mentre classi periferiche e altamente granulari, quali le
+singole categorie della classificazione TNM, avrebbero prodotto un numero di
+esempi ridondante rispetto alla loro effettiva rilevanza. Il risultato atteso di
+un simile sbilanciamento non sarebbe stato un dataset semplicemente meno
+efficiente, ma un modello allenato su di esso incline a generalizzare peggio
+proprio sulle categorie di domande più frequenti nell'uso previsto del sistema.
 
 La distanza dal nodo Patient non costituisce l'unico criterio di raggruppamento
 adottato nel corso del progetto. Un secondo raggruppamento, tematico anziché
@@ -315,15 +324,17 @@ Il numero di record generati per ciascun gruppo decresce dal centro alla
 periferia del dominio ma tale decrescita non segue una progressione lineare
 rigida. Questo andamento è coerente con una calibrazione empirica, ovvero
 condotta bilanciando l'equilibrio finale del dataset, piuttosto che con
-l'applicazione di una formula matematica definita anticipatamente. Lo stesso principio di calibrazione empirica viene applicato al sistema dei
-quattro parametri descritto nella sezione seguente.
+l'applicazione di una formula matematica definita anticipatamente. Lo stesso
+principio di calibrazione empirica viene applicato al sistema dei quattro
+parametri descritto nella sezione seguente.
 
 In sintesi, il dataset text-to-SPARQL prodotto da questo sistema non è generato
 in modo uniforme sull'intero schema disponibile, ma segue una gerarchia di
-rilevanza clinica propria del progetto. Le classi incluse e i parametri di complessità applicati a ciascuna sono
-stati scelti con l'obiettivo di riflettere le tipologie di domande ritenute
-più rilevanti nel contesto del Cancer Virtual Lab, privilegiando la rilevanza
-del dominio rispetto alla massimizzazione della copertura formale del grafo.
+rilevanza clinica propria del progetto. Le classi incluse e i parametri di
+complessità applicati a ciascuna sono stati scelti con l'obiettivo di riflettere
+le tipologie di domande ritenute più rilevanti nel contesto del Cancer Virtual
+Lab, privilegiando la rilevanza del dominio rispetto alla massimizzazione della
+copertura formale del grafo.
 
 
 \subsection{Sistema dei parametri}
@@ -364,11 +375,11 @@ Sebbene l'impianto concettuale dei quattro parametri sia rimasto invariato nel
 corso del progetto, i valori numerici effettivamente assegnati a ciascuno di
 essi non sono stati definiti una sola volta, ma calibrati progressivamente
 attraverso diverse configurazioni successive, tutte vincolate da un limite
-superiore imposto dall'endpoint SPARQL stesso. Infatti query eccessivamente complesse,
-al crescere del numero di relazioni e proprietà vincolate simultaneamente,
-incorrevano in timeout o fallivano l'esecuzione contro il triplestore reale,
-rendendo necessario mantenere ciascun parametro entro un tetto massimo
-compatibile con le capacità dell'endpoint.
+superiore imposto dall'endpoint SPARQL stesso. Infatti query eccessivamente
+complesse, al crescere del numero di relazioni e proprietà vincolate
+simultaneamente, incorrevano in timeout o fallivano l'esecuzione contro il
+triplestore reale, rendendo necessario mantenere ciascun parametro entro un
+tetto massimo compatibile con le capacità dell'endpoint.
 
 \subsection{Meccanismo di estensione}
 
@@ -384,16 +395,16 @@ per un nuovo preset di generazione, un intervallo disgiunto da quello di un
 preset precedente su almeno una dimensione rilevante, i due spazi risultano
 disgiunti a livello di configurazione dei parametri. In questo modo il nuovo
 preset esplora combinazioni che non appartenevano allo spazio configurato in
-precedenza. La proprietà è quindi garantita a livello parametrico; l'assenza
-di duplicati a livello di query è invece una proprietà che dipende dal modo in
-cui le configurazioni vengono trasformate in query e, se necessario, può essere
+precedenza. La proprietà è quindi garantita a livello parametrico; l'assenza di
+duplicati a livello di query è invece una proprietà che dipende dal modo in cui
+le configurazioni vengono trasformate in query e, se necessario, può essere
 verificata esplicitamente durante la generazione.
 
 Questa distinzione rende il meccanismo di estensione più preciso: l'aggiunta di
-nuove porzioni al dataset non richiede una riprogettazione del generatore, ma
-la definizione di nuovi preset i cui intervalli siano scelti in relazione a
-quelli già utilizzati. La procedura può essere applicata ripetutamente,
-mantenendo traccia dello spazio parametrico già esplorato e introducendo nuove
+nuove porzioni al dataset non richiede una riprogettazione del generatore, ma la
+definizione di nuovi preset i cui intervalli siano scelti in relazione a quelli
+già utilizzati. La procedura può essere applicata ripetutamente, mantenendo
+traccia dello spazio parametrico già esplorato e introducendo nuove
 configurazioni al di fuori di esso.
 
 \section{Design dell'augmentation}
@@ -401,19 +412,20 @@ configurazioni al di fuori di esso.
 Questa sezione descrive le decisioni progettuali alla base del secondo stadio
 del sistema, responsabile della trasformazione delle coppie prompt-query
 prodotte dal generatore in più varianti linguistiche naturali, secondo il
-compromesso tra varietà e fedeltà semantica richiesto da \hyperref[obj:O2]{O2} e la robustezza
-semantica richiesta da \hyperref[rnf:RNF3]{RNF3}.
+compromesso tra varietà e fedeltà semantica richiesto da \hyperref[obj:O2]{O2} e
+la robustezza semantica richiesta da \hyperref[rnf:RNF3]{RNF3}.
 
 \subsection{Mascheramento dei valori letterali}
 
-Il problema affrontato da questo stadio è duplice: da un lato produrre
-varie riformulazioni linguisticamente a partire da uno stesso prompt, dall'altro
+Il problema affrontato da questo stadio è duplice: da un lato produrre varie
+riformulazioni linguisticamente a partire da uno stesso prompt, dall'altro
 garantire che tale variazione non alteri i valori letterali che compaiono nel
 prompt e che sono referenziati dalla query SPARQL associata (identificativi,
 codici di classificazione clinica, date). Lasciare che un modello linguistico
 riscriva liberamente l'intero testo, valori inclusi, esporrebbe il sistema al
-rischio già discusso in \hyperref[rf:RF3]{RF3} e \hyperref[rnf:RNF3]{RNF3}, ovvero una riformulazione apparentemente valida
-ma silenziosamente scorretta rispetto alla query originale.
+rischio già discusso in \hyperref[rf:RF3]{RF3} e \hyperref[rnf:RNF3]{RNF3},
+ovvero una riformulazione apparentemente valida ma silenziosamente scorretta
+rispetto alla query originale.
 
 La soluzione adottata separa la variazione linguistica dai valori da preservare
 tramite un meccanismo di mascheramento. Prima di essere sottoposto al modello,
@@ -445,77 +457,78 @@ delle riformulazioni generate tende a diminuire.
 Il mascheramento garantisce che i valori letterali, se presenti nell'output,
 siano corretti; non garantisce però che il modello produca sempre un output
 valido al primo tentativo, né che varianti successive dello stesso record non
-finiscano per ripetersi tra loro, vanificando l'obiettivo di varietà
-linguistica di \hyperref[obj:O2]{O2}.
+finiscano per ripetersi tra loro, vanificando l'obiettivo di varietà linguistica
+di \hyperref[obj:O2]{O2}.
 
-Il sistema affronta questo problema attraverso un ciclo iterativo di generazione e verifica. Ogni candidato prodotto dal modello viene sottoposto a una fase di validazione che considera diversi criteri.
+Il sistema affronta questo problema attraverso un ciclo iterativo di generazione
+e verifica. Ogni candidato prodotto dal modello viene sottoposto a una fase di
+validazione che considera diversi criteri.
 
 \begin{itemize}
-    \item \textbf{Preservazione dei segnaposto.} Il candidato viene rifiutato
-          se anche un solo segnaposto è stato omesso, modificato o sostituito.
+    \item \textbf{Preservazione dei segnaposto.} Il candidato viene rifiutato se
+          anche un solo segnaposto è stato omesso, modificato o sostituito.
 
     \item \textbf{Assenza di segnaposto non previsti.} Viene verificato che il
-          testo non contenga sequenze che imitano la sintassi di un segnaposto senza
-          corrispondere a uno dei segnaposto effettivamente presenti nel testo
-          originale.
+          testo non contenga sequenze che imitano la sintassi di un segnaposto
+          senza corrispondere a uno dei segnaposto effettivamente presenti nel
+          testo originale.
 
     \item \textbf{Controllo della similarità.} Il candidato viene confrontato
           con le varianti già accettate per lo stesso record. Se risulta
           eccessivamente simile a una di esse, viene rifiutato. La soglia di
-          similarità viene resa progressivamente più permissiva al diminuire della
-          lunghezza del testo, così da evitare che formulazioni brevi vengano
-          considerate erroneamente come duplicati.
+          similarità viene resa progressivamente più permissiva al diminuire
+          della lunghezza del testo, così da evitare che formulazioni brevi
+          vengano considerate erroneamente come duplicati.
 \end{itemize}
 
 In caso di rifiuto, il sistema non si limita a ripetere la generazione. Il
-candidato scartato e il relativo motivo vengono forniti al modello come
-contesto aggiuntivo per il tentativo successivo, in modo da ridurre la
-probabilità che venga ripetuto lo stesso errore. A ogni nuovo tentativo viene
-inoltre incrementata progressivamente la temperatura di campionamento,
-favorendo la produzione di una formulazione diversa da quella precedente.
+candidato scartato e il relativo motivo vengono forniti al modello come contesto
+aggiuntivo per il tentativo successivo, in modo da ridurre la probabilità che
+venga ripetuto lo stesso errore. A ogni nuovo tentativo viene inoltre
+incrementata progressivamente la temperatura di campionamento, favorendo la
+produzione di una formulazione diversa da quella precedente.
 
 Se anche l'ultimo tentativo disponibile viene rifiutato, il sistema non forza
 comunque l'inserimento di una nuova variante. Viene invece mantenuto il testo
 originale non modificato e viene registrato esplicitamente il ricorso a questo
 comportamento di ripiego. In questo modo si evita di accettare silenziosamente
-una formulazione che violi i vincoli definiti da \hyperref[rf:RF3]{RF3} o \hyperref[rnf:RNF3]{RNF3}.
+una formulazione che violi i vincoli definiti da \hyperref[rf:RF3]{RF3} o
+\hyperref[rnf:RNF3]{RNF3}.
 
-Il numero di varianti richieste per ciascun record non è inoltre fissato in
-modo uniforme, ma proporzionato al numero di valori mascherati nel record: un
-prompt con pochi valori offre in pratica poco margine di riformulazione
-prima di esaurire le combinazioni naturali, per cui imporre lo stesso numero
-di varianti richieste a un record semplice e a uno complesso avrebbe
-prodotto, nel primo caso, un'alta proporzione di tentativi rifiutati per
-eccessiva similarità.
+Il numero di varianti richieste per ciascun record non è inoltre fissato in modo
+uniforme, ma proporzionato al numero di valori mascherati nel record: un prompt
+con pochi valori offre in pratica poco margine di riformulazione prima di
+esaurire le combinazioni naturali, per cui imporre lo stesso numero di varianti
+richieste a un record semplice e a uno complesso avrebbe prodotto, nel primo
+caso, un'alta proporzione di tentativi rifiutati per eccessiva similarità.
 
 \subsection{Varietà stilistica}
 
 Il solo mascheramento non garantisce, di per sé, la varietà linguistica
-richiesta da \hyperref[obj:O2]{O2}: un modello lasciato libero di riformulare tende a
-convergere su un piccolo numero di strutture sintattiche ricorrenti. Il
+richiesta da \hyperref[obj:O2]{O2}: un modello lasciato libero di riformulare
+tende a convergere su un piccolo numero di strutture sintattiche ricorrenti. Il
 sistema affronta questo problema definendo un insieme di dieci registri
 stilistici predefiniti (ad esempio una formulazione tecnica in stile
-interrogazione a database, una clinico-formale, una colloquiale, una
-statistica orientata al conteggio), esplicitamente descritti al modello a
-ogni chiamata.
+interrogazione a database, una clinico-formale, una colloquiale, una statistica
+orientata al conteggio), esplicitamente descritti al modello a ogni chiamata.
 
 Gli stili non vengono assegnati alle varianti in modo casuale, ma percorsi in
 sequenza ciclica, in modo che la distribuzione degli stili sulle varianti
 generate risulti uniforme anziché soggetta alla variabilità di un'estrazione
 casuale. Per ciascuno stile, il sistema mantiene inoltre una memoria a breve
-termine delle formulazioni e delle parole di apertura usate più di recente:
-un nuovo candidato che ripropone un'apertura già usata di recente per lo
-stesso stile viene rifiutato dalla validazione allo stesso modo di una
-riformulazione troppo simile a livello di intero testo, estendendo così il
-controllo di varietà anche alla struttura delle prime parole della frase, non
-solo al suo contenuto complessivo.
+termine delle formulazioni e delle parole di apertura usate più di recente: un
+nuovo candidato che ripropone un'apertura già usata di recente per lo stesso
+stile viene rifiutato dalla validazione allo stesso modo di una riformulazione
+troppo simile a livello di intero testo, estendendo così il controllo di varietà
+anche alla struttura delle prime parole della frase, non solo al suo contenuto
+complessivo.
 
-Il sistema conserva infine, per ciascun record, anche una modalità
-alternativa priva di mascheramento, che riproduce il comportamento
-originario a chiamata singola sull'intero testo. Questa modalità non
-costituisce un secondo percorso di produzione, ma un termine di paragone
-esplicito, i cui risultati sono discussi assieme a quelli della modalità con
-mascheramento nel capitolo di valutazione.
+Il sistema conserva infine, per ciascun record, anche una modalità alternativa
+priva di mascheramento, che riproduce il comportamento originario a chiamata
+singola sull'intero testo. Questa modalità non costituisce un secondo percorso
+di produzione, ma un termine di paragone esplicito, i cui risultati sono
+discussi assieme a quelli della modalità con mascheramento nel capitolo di
+valutazione.
 
 
 \chapter{Implementazione}
@@ -531,8 +544,8 @@ mascheramento nel capitolo di valutazione.
 \backmatter
 
 
-\bibliographystyle{alpha}
-\bibliography{bibliography}
+%\bibliographystyle{alpha}
+%\bibliography{bibliography}
 
 \begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non
     la vuoi
