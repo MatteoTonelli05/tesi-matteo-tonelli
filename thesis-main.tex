@@ -81,29 +81,28 @@ Da questo obiettivo generale derivano quattro obiettivi più specifici, che hann
 guidato le scelte progettuali descritte nei capitoli successivi.
 
 \begin{itemize}
-    \item[\textbf{O1}]\label{obj:O1} \textit{Copertura selettiva ed
-              estendibilità}. Il dataset deve coprire le parti dello schema del
-          knowledge graph più rilevanti per l'applicazione, senza richiedere la
-          copertura completa dello schema. Il sistema deve inoltre permettere di
-          estendere progressivamente questa copertura aggiungendo nuove classi e
-          relazioni, senza richiedere una riprogettazione del generatore.
+    \item[\textbf{O1}]\label{obj:O1} \textit{Copertura selettiva ed estendibilità}. Il dataset deve
+          coprire le parti dello schema del knowledge graph più rilevanti per
+          l'applicazione, senza richiedere la copertura completa dello schema.
+          Il sistema deve inoltre permettere di estendere progressivamente questa
+          copertura aggiungendo nuove classi e relazioni, senza richiedere una
+          riprogettazione del generatore.
 
-    \item[\textbf{O2}]\label{obj:O2} \textit{Varietà linguistica autentica}. Le
-          domande generate devono presentare una varietà linguistica sufficiente
-          a evitare formulazioni ripetitive o riconducibili a un unico template,
-          mantenendo invariato il significato espresso dalla query sottostante.
+    \item[\textbf{O2}]\label{obj:O2} \textit{Varietà linguistica autentica}. Le domande generate
+          devono presentare una varietà linguistica sufficiente a evitare
+          formulazioni ripetitive o riconducibili a un unico template, mantenendo
+          invariato il significato espresso dalla query sottostante.
 
-    \item[\textbf{O3}]\label{obj:O3} \textit{Tracciabilità completa}. Ogni
-          domanda generata deve essere associata in modo univoco alla query
-          SPARQL da cui deriva. L'associazione tra domanda e query deve essere
-          quindi conservata esplicitamente, così da rendere verificabile ogni
-          coppia utilizzata nel dataset.
+    \item[\textbf{O3}]\label{obj:O3} \textit{Tracciabilità completa}. Ogni domanda generata deve
+          essere associata in modo univoco alla query SPARQL da cui deriva.
+          L'associazione tra domanda e query deve essere quindi conservata
+          esplicitamente, così da rendere verificabile ogni coppia utilizzata
+          nel dataset.
 
-    \item[\textbf{O4}]\label{obj:O4} \textit{Volume di dati adeguato al
-              fine-tuning}. Il dataset deve contenere un numero di esempi
-          sufficiente per supportare il fine-tuning del modello linguistico
-          considerato e deve garantire una copertura adeguata delle diverse
-          tipologie di query previste.
+    \item[\textbf{O4}]\label{obj:O4} \textit{Volume di dati adeguato al fine-tuning}. Il dataset deve
+          contenere un numero di esempi sufficiente per supportare il fine-tuning
+          del modello linguistico considerato e deve garantire una copertura
+          adeguata delle diverse tipologie di query previste.
 
 \end{itemize}
 
@@ -114,29 +113,27 @@ influenzato le scelte architetturali, descritte nel dettaglio nei capitoli
 successivi.
 
 \begin{itemize}
-    \item[\textbf{V1}]\label{vinc:V1} \textit{Compatibilità con uno schema
-              esistente e non modificabile}. Il sistema deve generare query
-          conformi allo schema dell'ontologia del Cancer Virtual Lab,
-          preesistente al progetto e non alterabile nel suo ambito. Nomi di
-          classi, proprietà e relazioni sono vincoli esterni, non
-          negoziabili in funzione di una generazione più semplice o di una
-          copertura più ampia.
+    \item[\textbf{V1}]\label{vinc:V1} \textit{Compatibilità con uno schema esistente e non
+              modificabile}. Il sistema deve generare query conformi allo schema
+          dell'ontologia del Cancer Virtual Lab, preesistente al progetto e
+          non alterabile nel suo ambito. Nomi di classi, proprietà e
+          relazioni sono vincoli esterni, non negoziabili in funzione di una
+          generazione più semplice o di una copertura più ampia.
 
-    \item[\textbf{V2}]\label{vinc:V2} \textit{Trattamento di dati clinici
-              sensibili}. I valori coinvolti nelle query come identificativi di
-          pazienti, codici di classificazione clinica o date sono dati clinici
-          il cui significato deve rimanere verificabile e inalterato in ogni
-          fase del processo. Questo vincolo esclude, inoltre, l'invio di tali
-          dati a servizi esterni non controllati, imponendo l'esecuzione locale
-          di qualunque componente del sistema che vi acceda.
+    \item[\textbf{V2}]\label{vinc:V2} \textit{Trattamento di dati clinici sensibili}. I valori
+          coinvolti nelle query come identificativi di pazienti, codici di
+          classificazione clinica o date sono dati clinici il cui significato
+          deve rimanere verificabile e inalterato in ogni fase del processo.
+          Questo vincolo esclude, inoltre, l'invio di tali dati a servizi
+          esterni non controllati, imponendo l'esecuzione locale di qualunque
+          componente del sistema che vi acceda.
 
-    \item[\textbf{V3}]\label{vinc:V3} \textit{Capacità limitata del modello
-              linguistico impiegato}. A causa del vincolo sull'esecuzione locale
-          imposto da \hyperref[vinc:V2]{V2}, il sistema potrà sfruttare solo
-          modelli di dimensioni molto contenute, non potendo quindi fare
-          affidamento sulla correttezza semantica spontanea dell'output
-          prodotto, e richiede un meccanismo di validazione esplicito e
-          indipendente dal modello stesso.
+    \item[\textbf{V3}]\label{vinc:V3} \textit{Capacità limitata del modello linguistico
+              impiegato}. A causa del vincolo sull'esecuzione locale imposto da
+          \hyperref[vinc:V2]{V2}, il sistema potrà sfruttare solo modelli di dimensioni molto
+          contenute, non potendo quindi fare affidamento sulla correttezza
+          semantica spontanea dell'output prodotto, e richiede un meccanismo
+          di validazione esplicito e indipendente dal modello stesso.
 \end{itemize}
 
 \section{Requisiti funzionali}
@@ -145,27 +142,26 @@ I requisiti funzionali descrivono cosa il sistema deve produrre,
 indipendentemente da come tale produzione venga realizzata.
 
 \begin{itemize}
-    \item[\textbf{RF1}]\label{rf:RF1} \textit{Generazione di coppie
-              prompt-query}. Il sistema deve generare coppie costituite da una query
-          SPARQL sintatticamente valida e da un prompt in linguaggio naturale
-          corrispondente, a partire dallo schema del knowledge graph.
+    \item[\textbf{RF1}]\label{rf:RF1} \textit{Generazione di coppie prompt-query}. Il sistema
+          deve generare coppie costituite da una query SPARQL sintatticamente
+          valida e da un prompt in linguaggio naturale corrispondente, a partire
+          dallo schema del knowledge graph.
 
-    \item[\textbf{RF2}]\label{rf:RF2} \textit{Produzione di varianti multiple}.
-          Il sistema deve produrre, per ciascuna coppia generata, un numero
-          variabile di varianti parafrasate del medesimo prompt, preservando
-          invariata la query associata.
+    \item[\textbf{RF2}]\label{rf:RF2} \textit{Produzione di varianti multiple}. Il sistema
+          deve produrre, per ciascuna coppia generata, un numero variabile di
+          varianti parafrasate del medesimo prompt, preservando invariata la
+          query associata.
 
-    \item[\textbf{RF3}]\label{rf:RF3} \textit{Preservazione dei valori
-              letterali}. Il sistema deve garantire, in ciascuna variante
-          parafrasata, la presenza dei valori letterali presenti nella query,
-          quali identificativi di pazienti, codici di classificazione clinica o
-          date, nella loro forma esatta o in una forma alternativa verificabile.
+    \item[\textbf{RF3}]\label{rf:RF3} \textit{Preservazione dei valori letterali}. Il sistema
+          deve garantire, in ciascuna variante parafrasata, la presenza dei
+          valori letterali presenti nella query, quali identificativi di
+          pazienti, codici di classificazione clinica o date, nella loro forma
+          esatta o in una forma alternativa verificabile.
 
-    \item[\textbf{RF4}]\label{rf:RF4} \textit{Complessità variabile delle
-              query}. Il sistema deve supportare la generazione di query di
-          complessità variabile, dal caso di un singolo vincolo su una singola
-          proprietà fino a query che attraversano più relazioni e combinano più
-          vincoli sullo stesso nodo.
+    \item[\textbf{RF4}]\label{rf:RF4} \textit{Complessità variabile delle query}. Il sistema
+          deve supportare la generazione di query di complessità variabile, dal
+          caso di un singolo vincolo su una singola proprietà fino a query che
+          attraversano più relazioni e combinano più vincoli sullo stesso nodo.
 \end{itemize}
 
 \section{Requisiti non funzionali}
@@ -174,25 +170,24 @@ I requisiti non funzionali riguardano invece proprietà trasversali del sistema,
 non direttamente osservabili nel singolo output prodotto.
 
 \begin{itemize}
-    \item[\textbf{RNF1}]\label{rnf:RNF1} \textit{Sostenibilità computazionale}.
-          Il sistema deve garantire un tasso di accettazione delle generazioni
-          sufficientemente elevato da rendere il processo economicamente
-          sostenibile in termini di tempo di calcolo.
+    \item[\textbf{RNF1}]\label{rnf:RNF1} \textit{Sostenibilità computazionale}. Il sistema deve
+          garantire un tasso di accettazione delle generazioni sufficientemente
+          elevato da rendere il processo economicamente sostenibile in termini
+          di tempo di calcolo.
 
-    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Riproducibilità in caso di
-              interruzione}. Il sistema deve essere in grado di riprendere una
-          generazione interrotta senza ripetere il lavoro già completato.
+    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Riproducibilità in caso di interruzione}. Il
+          sistema deve essere in grado di riprendere una generazione interrotta
+          senza ripetere il lavoro già completato.
 
-    \item[\textbf{RNF3}]\label{rnf:RNF3} \textit{Robustezza semantica}. Il
-          sistema deve limitare il rischio che la variazione linguistica
-          modifichi, senza rilevarlo, il significato della domanda rispetto alla
-          query sottostante, con particolare attenzione ai valori clinici
-          controllati.
+    \item[\textbf{RNF3}]\label{rnf:RNF3} \textit{Robustezza semantica}. Il sistema deve
+          limitare il rischio che la variazione linguistica modifichi,
+          senza rilevarlo, il significato della domanda rispetto alla query
+          sottostante, con particolare attenzione ai valori clinici controllati.
 \end{itemize}
 
 \textit{\\\textbf{Nota}
-    La robustezza semantica riguarda quindi la fedeltà del contenuto, mentre la
-    tracciabilità di \hyperref[obj:O3]{O3} riguarda la provenienza e
+    La robustezza semantica riguarda quindi la fedeltà del contenuto,
+    mentre la tracciabilità di \hyperref[obj:O3]{O3} riguarda la provenienza e
     l'associazione tra testo e query.}
 
 \chapter{Progettazione}
@@ -200,56 +195,52 @@ non direttamente osservabili nel singolo output prodotto.
 
 \section{Analisi dei problemi}
 
-I requisiti e i vincoli descritti nel capitolo precedente si traducono in tre
-sotto-problemi progettuali distinti, la cui interazione determina la difficoltà
-complessiva del compito. La distinzione è utile perché consente di separare le
-difficoltà legate alla costruzione delle query da quelle introdotte dalla
-variazione linguistica e, infine, dalla necessità di verificare gli output
+I requisiti e i vincoli descritti nel capitolo precedente si traducono
+in tre sotto-problemi progettuali distinti, la cui interazione determina la
+difficoltà complessiva del compito. La distinzione è utile perché consente di
+separare le difficoltà legate alla costruzione delle query da quelle introdotte
+dalla variazione linguistica e, infine, dalla necessità di verificare gli output
 prodotti.
 
 \begin{itemize}
-    \item[\textbf{P1}]\label{prob:P1} \textit{Sotto-problema combinatorio}. Dato
-          lo schema del knowledge graph, generare query SPARQL sintatticamente
-          corrette che coprano una distribuzione rappresentativa dell'uso reale
-          del sistema, senza produrre un numero di combinazioni non gestibile
-          nei tempi o eccessivo per un corretto fine-tuning.
+    \item[\textbf{P1}]\label{prob:P1} \textit{Sotto-problema combinatorio}. Dato lo schema del
+          knowledge graph, generare query SPARQL sintatticamente corrette che
+          coprano una distribuzione rappresentativa dell'uso reale del sistema,
+          senza produrre un numero di combinazioni non gestibile nei tempi o
+          eccessivo per un corretto fine-tuning.
 
-    \item[\textbf{P2}]\label{prob:P2} \textit{Sotto-problema linguistico}. Dato
-          un prompt in forma template privo di variazione, generare un numero
-          variabile di parafrasi che siano al tempo stesso fluenti in linguaggio
-          naturale e fedeli al contenuto semantico della query sottostante. A
-          differenza di \hyperref[prob:P1]{P1}, qui la difficoltà non risiede
-          nella dimensione dello spazio delle soluzioni possibili, ma
-          nell'assenza di un criterio puramente formale per distinguere una
-          parafrasi corretta da una scorretta. Una parafrasi può infatti essere
-          grammaticalmente ineccepibile e superare ogni controllo meccanico
-          applicabile, e tuttavia alterare il significato della domanda
-          originale.
+    \item[\textbf{P2}]\label{prob:P2} \textit{Sotto-problema linguistico}. Dato un prompt in
+          forma template privo di variazione, generare un numero variabile di
+          parafrasi che siano al tempo stesso fluenti in linguaggio naturale e
+          fedeli al contenuto semantico della query sottostante. A differenza di
+          \hyperref[prob:P1]{P1}, qui la difficoltà non risiede nella dimensione dello spazio delle
+          soluzioni possibili, ma nell'assenza di un criterio puramente formale
+          per distinguere una parafrasi corretta da una scorretta. Una parafrasi
+          può infatti essere grammaticalmente ineccepibile e superare ogni
+          controllo meccanico applicabile, e tuttavia alterare il significato
+          della domanda originale.
 
-    \item[\textbf{P3}]\label{prob:P3} \textit{Sotto-problema di validazione}.
-          Distinto da \hyperref[prob:P1]{P1} e \hyperref[prob:P2]{P2} ma
-          dipendente da entrambi: verificare, per ciascuna variante generata,
-          che la relazione con la query associata sia corretta e che il
-          contenuto semantico non sia stato alterato durante la variazione
-          linguistica. La tracciabilità richiesta da \hyperref[obj:O3]{O3} è una
-          proprietà verificabile della provenienza del dato; la robustezza
-          semantica di \hyperref[rnf:RNF3]{RNF3} introduce invece una difficoltà
-          ulteriore, poiché non esiste un criterio puramente formale che
-          stabilisca con certezza l'equivalenza tra una formulazione in
-          linguaggio naturale e la rappresentazione SPARQL sottostante. P3 è
-          quindi il punto in cui la pipeline deve combinare controlli
-          strutturali e semantici, ed è discusso nel dettaglio nel capitolo di
-          valutazione.
+    \item[\textbf{P3}]\label{prob:P3} \textit{Sotto-problema di validazione}. Distinto da \hyperref[prob:P1]{P1} e
+          \hyperref[prob:P2]{P2} ma dipendente da entrambi: verificare, per ciascuna variante
+          generata, che la relazione con la query associata sia corretta e che
+          il contenuto semantico non sia stato alterato durante la variazione
+          linguistica. La tracciabilità richiesta da \hyperref[obj:O3]{O3} è una proprietà
+          verificabile della provenienza del dato; la robustezza semantica di
+          \hyperref[rnf:RNF3]{RNF3} introduce invece una difficoltà ulteriore, poiché non esiste un
+          criterio puramente formale che stabilisca con certezza l'equivalenza
+          tra una formulazione in linguaggio naturale e la rappresentazione
+          SPARQL sottostante. P3 è quindi il punto in cui la pipeline deve
+          combinare controlli strutturali e semantici, ed è discusso nel
+          dettaglio nel capitolo di valutazione.
 \end{itemize}
 
-I tre sotto-problemi individuati nell'analisi vengono affrontati da componenti
-distinti della pipeline. \hyperref[prob:P1]{P1} è affrontato attraverso il
-generatore parametrico di query, che consente di controllare lo spazio delle
-configurazioni esplorate. \hyperref[prob:P2]{P2} è affrontato attraverso la fase
-di augmentation linguistica, progettata per produrre formulazioni diverse a
-partire dalla medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di
-validazione, che verifica gli output prodotti dalle fasi precedenti prima del
-loro inserimento nel dataset.
+I tre sotto-problemi individuati nell'analisi vengono affrontati da
+componenti distinti della pipeline. \hyperref[prob:P1]{P1} è affrontato attraverso il generatore
+parametrico di query, che consente di controllare lo spazio delle
+configurazioni esplorate. \hyperref[prob:P2]{P2} è affrontato attraverso la fase di augmentation
+linguistica, progettata per produrre formulazioni diverse a partire dalla
+medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di validazione, che verifica gli
+output prodotti dalle fasi precedenti prima del loro inserimento nel dataset.
 
 \section{Design del generatore}
 
@@ -286,18 +277,18 @@ non solo rispetto alla rilevanza clinica, ma anche rispetto alla difficoltà
 attesa della domanda-tipo associata a ciascuna classe.
 
 L'assenza di un simile criterio di priorizzazione avrebbe comportato conseguenze
-dirette sul dataset prodotto, discusse in relazione a \hyperref[obj:O4]{O4} nel
-capitolo di analisi. Trattando le quarantacinque classi come equivalenti, il
-sistema avrebbe allocato un budget di generazione identico a ciascuna,
-indipendentemente dalla sua centralità nel dominio clinico. Classi
-concettualmente centrali, quali Patient, Diagnosis e Therapy, avrebbero ricevuto
-una rappresentazione insufficiente rispetto alla frequenza con cui compaiono
-nell'uso reale, mentre classi periferiche e altamente granulari, quali le
-singole categorie della classificazione TNM, avrebbero prodotto un numero di
-esempi ridondante rispetto alla loro effettiva rilevanza. Il risultato atteso di
-un simile sbilanciamento non sarebbe stato un dataset semplicemente meno
-efficiente, ma un modello allenato su di esso incline a generalizzare peggio
-proprio sulle categorie di domande più frequenti nell'uso previsto del sistema.
+dirette sul dataset prodotto, discusse in relazione a \hyperref[obj:O4]{O4} nel capitolo di
+analisi. Trattando le quarantacinque classi come equivalenti, il sistema avrebbe
+allocato un budget di generazione identico a ciascuna, indipendentemente dalla
+sua centralità nel dominio clinico. Classi concettualmente centrali, quali
+Patient, Diagnosis e Therapy, avrebbero ricevuto una rappresentazione
+insufficiente rispetto alla frequenza con cui compaiono nell'uso reale, mentre
+classi periferiche e altamente granulari, quali le singole categorie della
+classificazione TNM, avrebbero prodotto un numero di esempi ridondante rispetto
+alla loro effettiva rilevanza. Il risultato atteso di un simile sbilanciamento
+non sarebbe stato un dataset semplicemente meno efficiente, ma un modello
+allenato su di esso incline a generalizzare peggio proprio sulle categorie di
+domande più frequenti nell'uso previsto del sistema.
 
 La distanza dal nodo Patient non costituisce l'unico criterio di raggruppamento
 adottato nel corso del progetto. Un secondo raggruppamento, tematico anziché
@@ -324,17 +315,15 @@ Il numero di record generati per ciascun gruppo decresce dal centro alla
 periferia del dominio ma tale decrescita non segue una progressione lineare
 rigida. Questo andamento è coerente con una calibrazione empirica, ovvero
 condotta bilanciando l'equilibrio finale del dataset, piuttosto che con
-l'applicazione di una formula matematica definita anticipatamente. Lo stesso
-principio di calibrazione empirica viene applicato al sistema dei quattro
-parametri descritto nella sezione seguente.
+l'applicazione di una formula matematica definita anticipatamente. Lo stesso principio di calibrazione empirica viene applicato al sistema dei
+quattro parametri descritto nella sezione seguente.
 
 In sintesi, il dataset text-to-SPARQL prodotto da questo sistema non è generato
 in modo uniforme sull'intero schema disponibile, ma segue una gerarchia di
-rilevanza clinica propria del progetto. Le classi incluse e i parametri di
-complessità applicati a ciascuna sono stati scelti con l'obiettivo di riflettere
-le tipologie di domande ritenute più rilevanti nel contesto del Cancer Virtual
-Lab, privilegiando la rilevanza del dominio rispetto alla massimizzazione della
-copertura formale del grafo.
+rilevanza clinica propria del progetto. Le classi incluse e i parametri di complessità applicati a ciascuna sono
+stati scelti con l'obiettivo di riflettere le tipologie di domande ritenute
+più rilevanti nel contesto del Cancer Virtual Lab, privilegiando la rilevanza
+del dominio rispetto alla massimizzazione della copertura formale del grafo.
 
 
 \subsection{Sistema dei parametri}
@@ -375,11 +364,11 @@ Sebbene l'impianto concettuale dei quattro parametri sia rimasto invariato nel
 corso del progetto, i valori numerici effettivamente assegnati a ciascuno di
 essi non sono stati definiti una sola volta, ma calibrati progressivamente
 attraverso diverse configurazioni successive, tutte vincolate da un limite
-superiore imposto dall'endpoint SPARQL stesso. Infatti query eccessivamente
-complesse, al crescere del numero di relazioni e proprietà vincolate
-simultaneamente, incorrevano in timeout o fallivano l'esecuzione contro il
-triplestore reale, rendendo necessario mantenere ciascun parametro entro un
-tetto massimo compatibile con le capacità dell'endpoint.
+superiore imposto dall'endpoint SPARQL stesso. Infatti query eccessivamente complesse,
+al crescere del numero di relazioni e proprietà vincolate simultaneamente,
+incorrevano in timeout o fallivano l'esecuzione contro il triplestore reale,
+rendendo necessario mantenere ciascun parametro entro un tetto massimo
+compatibile con le capacità dell'endpoint.
 
 \subsection{Meccanismo di estensione}
 
@@ -395,16 +384,16 @@ per un nuovo preset di generazione, un intervallo disgiunto da quello di un
 preset precedente su almeno una dimensione rilevante, i due spazi risultano
 disgiunti a livello di configurazione dei parametri. In questo modo il nuovo
 preset esplora combinazioni che non appartenevano allo spazio configurato in
-precedenza. La proprietà è quindi garantita a livello parametrico; l'assenza di
-duplicati a livello di query è invece una proprietà che dipende dal modo in cui
-le configurazioni vengono trasformate in query e, se necessario, può essere
+precedenza. La proprietà è quindi garantita a livello parametrico; l'assenza
+di duplicati a livello di query è invece una proprietà che dipende dal modo in
+cui le configurazioni vengono trasformate in query e, se necessario, può essere
 verificata esplicitamente durante la generazione.
 
 Questa distinzione rende il meccanismo di estensione più preciso: l'aggiunta di
-nuove porzioni al dataset non richiede una riprogettazione del generatore, ma la
-definizione di nuovi preset i cui intervalli siano scelti in relazione a quelli
-già utilizzati. La procedura può essere applicata ripetutamente, mantenendo
-traccia dello spazio parametrico già esplorato e introducendo nuove
+nuove porzioni al dataset non richiede una riprogettazione del generatore, ma
+la definizione di nuovi preset i cui intervalli siano scelti in relazione a
+quelli già utilizzati. La procedura può essere applicata ripetutamente,
+mantenendo traccia dello spazio parametrico già esplorato e introducendo nuove
 configurazioni al di fuori di esso.
 
 \section{Design dell'augmentation}
@@ -412,20 +401,19 @@ configurazioni al di fuori di esso.
 Questa sezione descrive le decisioni progettuali alla base del secondo stadio
 del sistema, responsabile della trasformazione delle coppie prompt-query
 prodotte dal generatore in più varianti linguistiche naturali, secondo il
-compromesso tra varietà e fedeltà semantica richiesto da \hyperref[obj:O2]{O2} e
-la robustezza semantica richiesta da \hyperref[rnf:RNF3]{RNF3}.
+compromesso tra varietà e fedeltà semantica richiesto da \hyperref[obj:O2]{O2} e la robustezza
+semantica richiesta da \hyperref[rnf:RNF3]{RNF3}.
 
 \subsection{Mascheramento dei valori letterali}
 
-Il problema affrontato da questo stadio è duplice: da un lato produrre varie
-riformulazioni linguisticamente a partire da uno stesso prompt, dall'altro
+Il problema affrontato da questo stadio è duplice: da un lato produrre
+varie riformulazioni linguisticamente a partire da uno stesso prompt, dall'altro
 garantire che tale variazione non alteri i valori letterali che compaiono nel
 prompt e che sono referenziati dalla query SPARQL associata (identificativi,
 codici di classificazione clinica, date). Lasciare che un modello linguistico
 riscriva liberamente l'intero testo, valori inclusi, esporrebbe il sistema al
-rischio già discusso in \hyperref[rf:RF3]{RF3} e \hyperref[rnf:RNF3]{RNF3},
-ovvero una riformulazione apparentemente valida ma silenziosamente scorretta
-rispetto alla query originale.
+rischio già discusso in \hyperref[rf:RF3]{RF3} e \hyperref[rnf:RNF3]{RNF3}, ovvero una riformulazione apparentemente valida
+ma silenziosamente scorretta rispetto alla query originale.
 
 La soluzione adottata separa la variazione linguistica dai valori da preservare
 tramite un meccanismo di mascheramento. Prima di essere sottoposto al modello,
@@ -457,82 +445,1116 @@ delle riformulazioni generate tende a diminuire.
 Il mascheramento garantisce che i valori letterali, se presenti nell'output,
 siano corretti; non garantisce però che il modello produca sempre un output
 valido al primo tentativo, né che varianti successive dello stesso record non
-finiscano per ripetersi tra loro, vanificando l'obiettivo di varietà linguistica
-di \hyperref[obj:O2]{O2}.
+finiscano per ripetersi tra loro, vanificando l'obiettivo di varietà
+linguistica di \hyperref[obj:O2]{O2}.
 
-Il sistema affronta questo problema attraverso un ciclo iterativo di generazione
-e verifica. Ogni candidato prodotto dal modello viene sottoposto a una fase di
-validazione che considera diversi criteri.
+Il sistema affronta questo problema attraverso un ciclo iterativo di generazione e verifica. Ogni candidato prodotto dal modello viene sottoposto a una fase di validazione che considera diversi criteri.
 
 \begin{itemize}
-    \item \textbf{Preservazione dei segnaposto.} Il candidato viene rifiutato se
-          anche un solo segnaposto è stato omesso, modificato o sostituito.
+    \item \textbf{Preservazione dei segnaposto.} Il candidato viene rifiutato
+          se anche un solo segnaposto è stato omesso, modificato o sostituito.
 
     \item \textbf{Assenza di segnaposto non previsti.} Viene verificato che il
-          testo non contenga sequenze che imitano la sintassi di un segnaposto
-          senza corrispondere a uno dei segnaposto effettivamente presenti nel
-          testo originale.
+          testo non contenga sequenze che imitano la sintassi di un segnaposto senza
+          corrispondere a uno dei segnaposto effettivamente presenti nel testo
+          originale.
 
     \item \textbf{Controllo della similarità.} Il candidato viene confrontato
           con le varianti già accettate per lo stesso record. Se risulta
           eccessivamente simile a una di esse, viene rifiutato. La soglia di
-          similarità viene resa progressivamente più permissiva al diminuire
-          della lunghezza del testo, così da evitare che formulazioni brevi
-          vengano considerate erroneamente come duplicati.
+          similarità viene resa progressivamente più permissiva al diminuire della
+          lunghezza del testo, così da evitare che formulazioni brevi vengano
+          considerate erroneamente come duplicati.
 \end{itemize}
 
 In caso di rifiuto, il sistema non si limita a ripetere la generazione. Il
-candidato scartato e il relativo motivo vengono forniti al modello come contesto
-aggiuntivo per il tentativo successivo, in modo da ridurre la probabilità che
-venga ripetuto lo stesso errore. A ogni nuovo tentativo viene inoltre
-incrementata progressivamente la temperatura di campionamento, favorendo la
-produzione di una formulazione diversa da quella precedente.
+candidato scartato e il relativo motivo vengono forniti al modello come
+contesto aggiuntivo per il tentativo successivo, in modo da ridurre la
+probabilità che venga ripetuto lo stesso errore. A ogni nuovo tentativo viene
+inoltre incrementata progressivamente la temperatura di campionamento,
+favorendo la produzione di una formulazione diversa da quella precedente.
 
 Se anche l'ultimo tentativo disponibile viene rifiutato, il sistema non forza
 comunque l'inserimento di una nuova variante. Viene invece mantenuto il testo
 originale non modificato e viene registrato esplicitamente il ricorso a questo
 comportamento di ripiego. In questo modo si evita di accettare silenziosamente
-una formulazione che violi i vincoli definiti da \hyperref[rf:RF3]{RF3} o
-\hyperref[rnf:RNF3]{RNF3}.
+una formulazione che violi i vincoli definiti da \hyperref[rf:RF3]{RF3} o \hyperref[rnf:RNF3]{RNF3}.
 
-Il numero di varianti richieste per ciascun record non è inoltre fissato in modo
-uniforme, ma proporzionato al numero di valori mascherati nel record: un prompt
-con pochi valori offre in pratica poco margine di riformulazione prima di
-esaurire le combinazioni naturali, per cui imporre lo stesso numero di varianti
-richieste a un record semplice e a uno complesso avrebbe prodotto, nel primo
-caso, un'alta proporzione di tentativi rifiutati per eccessiva similarità.
+Il numero di varianti richieste per ciascun record non è inoltre fissato in
+modo uniforme, ma proporzionato al numero di valori mascherati nel record: un
+prompt con pochi valori offre in pratica poco margine di riformulazione
+prima di esaurire le combinazioni naturali, per cui imporre lo stesso numero
+di varianti richieste a un record semplice e a uno complesso avrebbe
+prodotto, nel primo caso, un'alta proporzione di tentativi rifiutati per
+eccessiva similarità.
 
 \subsection{Varietà stilistica}
 
 Il solo mascheramento non garantisce, di per sé, la varietà linguistica
-richiesta da \hyperref[obj:O2]{O2}: un modello lasciato libero di riformulare
-tende a convergere su un piccolo numero di strutture sintattiche ricorrenti. Il
+richiesta da \hyperref[obj:O2]{O2}: un modello lasciato libero di riformulare tende a
+convergere su un piccolo numero di strutture sintattiche ricorrenti. Il
 sistema affronta questo problema definendo un insieme di dieci registri
 stilistici predefiniti (ad esempio una formulazione tecnica in stile
-interrogazione a database, una clinico-formale, una colloquiale, una statistica
-orientata al conteggio), esplicitamente descritti al modello a ogni chiamata.
+interrogazione a database, una clinico-formale, una colloquiale, una
+statistica orientata al conteggio), esplicitamente descritti al modello a
+ogni chiamata.
 
 Gli stili non vengono assegnati alle varianti in modo casuale, ma percorsi in
 sequenza ciclica, in modo che la distribuzione degli stili sulle varianti
 generate risulti uniforme anziché soggetta alla variabilità di un'estrazione
 casuale. Per ciascuno stile, il sistema mantiene inoltre una memoria a breve
-termine delle formulazioni e delle parole di apertura usate più di recente: un
-nuovo candidato che ripropone un'apertura già usata di recente per lo stesso
-stile viene rifiutato dalla validazione allo stesso modo di una riformulazione
-troppo simile a livello di intero testo, estendendo così il controllo di varietà
-anche alla struttura delle prime parole della frase, non solo al suo contenuto
-complessivo.
+termine delle formulazioni e delle parole di apertura usate più di recente:
+un nuovo candidato che ripropone un'apertura già usata di recente per lo
+stesso stile viene rifiutato dalla validazione allo stesso modo di una
+riformulazione troppo simile a livello di intero testo, estendendo così il
+controllo di varietà anche alla struttura delle prime parole della frase, non
+solo al suo contenuto complessivo.
 
-Il sistema conserva infine, per ciascun record, anche una modalità alternativa
-priva di mascheramento, che riproduce il comportamento originario a chiamata
-singola sull'intero testo. Questa modalità non costituisce un secondo percorso
-di produzione, ma un termine di paragone esplicito, i cui risultati sono
-discussi assieme a quelli della modalità con mascheramento nel capitolo di
-valutazione.
+Il sistema conserva infine, per ciascun record, anche una modalità
+alternativa priva di mascheramento, che riproduce il comportamento
+originario a chiamata singola sull'intero testo. Questa modalità non
+costituisce un secondo percorso di produzione, ma un termine di paragone
+esplicito, i cui risultati sono discussi assieme a quelli della modalità con
+mascheramento nel capitolo di valutazione.
 
 
 \chapter{Implementazione}
 \label{chap:implementation}
+
+In questo capitolo viene descritto come sono state implementate le varie parti
+del contributo di questa tesi, in maniera coerente con la progettazione svolta
+nel \cref{chap:progettazione}. La trattazione segue l'ordine cronologico in
+cui i due stadi del sistema sono stati sviluppati.
+
+\section{Implementazione del generatore}
+\label{sec:impl-generator}
+
+\subsection{Architettura a mixin}
+\label{sec:impl-mixin}
+
+Il generatore è organizzato attorno a un'unica classe,
+\texttt{BulkDatasetGenerator}, ottenuta mediante ereditarietà multipla da sei
+\emph{mixin}\footnote{Un mixin è una classe pensata per essere combinata con
+    altre tramite ereditarietà multipla, fornendo un insieme coeso di funzionalità
+    senza costituire di per sé una gerarchia di tipi completa.}.
+Questa struttura permette di suddividere l'implementazione in responsabilità
+distinte, mantenendo al tempo stesso un'unica interfaccia per l'intero processo
+di generazione. La scelta è coerente con l'obiettivo di mantenere il generatore
+estendibile: le diverse fasi della pipeline possono infatti essere modificate
+o ampliate intervenendo principalmente sul componente che ne implementa la
+relativa responsabilità.
+La composizione della classe principale è riportata nel
+\cref{lst:mixin-composition}.
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Composizione della classe principale del generatore tramite mixin.},
+    label={lst:mixin-composition}
+]
+class BulkDatasetGenerator(
+    FilterApiMixin,
+    DiscoveryMixin,
+    SkeletonMixin,
+    PlanningMixin,
+    ProgressMixin,
+    OutputMixin,
+):
+    # parameters
+\end{lstlisting}
+
+In particolare le divisioni consistono in:
+
+\begin{itemize}
+    \item \texttt{FilterApiMixin} incapsula le chiamate di rete verso l'API
+          interna del CVL;
+
+    \item \texttt{DiscoveryMixin} costruisce la mappa del grafo dello schema;
+
+    \item \texttt{SkeletonMixin} costruisce lo scheletro di una singola query;
+
+    \item \texttt{PlanningMixin} determina quali combinazioni di proprietà
+          devono essere campionate;
+
+    \item \texttt{OutputMixin} esegue i controlli di qualità finali e gestisce
+          la scrittura dei risultati su disco;
+
+    \item \texttt{ProgressMixin} gestisce gli aspetti legati all'interazione
+          con l'interfaccia Streamlit, tra cui l'aggiornamento della barra di
+          avanzamento e la possibilità di interrompere l'esecuzione.
+\end{itemize}
+
+Le responsabilità non sono quindi indipendenti, ma cooperano secondo il flusso
+della generazione, tutte fatta ad eccezione di \texttt{ProgressMixin} che costituisce invece una
+responsabilità trasversale, poiché può intervenire durante l'esecuzione delle
+diverse fasi senza rappresentare una fase autonoma della pipeline.
+
+La separazione è particolarmente evidente nella gestione dell'interruzione
+della generazione (gestita proprio da \texttt{ProgressMixin}).
+Il metodo \texttt{\_is\_aborted()}, riportato nel
+\cref{lst:abort}, viene richiamato periodicamente durante la generazione per
+verificare se l'esecuzione debba essere interrotta.
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Controllo dell'interruzione durante la generazione.},
+    label={lst:abort}
+]
+def _is_aborted(self) -> bool:
+    if self._abort_event.is_set():
+        return True
+    if not self.config.get("abortable", True):
+        return False
+    if self._can_paint() and bool(
+        st.session_state.get("abort_generation", False)
+    ):
+        self._abort_event.set()
+    return self._abort_event.is_set()
+\end{lstlisting}
+
+Il controllo combina due meccanismi. Il primo è l'evento di sincronizzazione
+interno \texttt{\_abort\_event}, che rappresenta lo stato di interruzione del
+run. Il secondo è lo stato dell'interfaccia Streamlit, dal quale viene letto
+il valore di \texttt{session\_state["abort\_generation"]}. Quando l'utente
+richiede l'interruzione, il metodo imposta l'evento interno; le chiamate
+successive possono quindi rilevare direttamente tale stato senza dover
+interrogare nuovamente l'interfaccia.
+
+Il controllo dello stato di Streamlit viene eseguito soltanto quando
+l'esecuzione è configurata come interrompibile, tramite
+\texttt{config["abortable"]}, e quando il contesto consente di interagire con
+l'interfaccia. In questo modo la stessa implementazione può essere utilizzata
+anche nei contesti che non espongono un controllo di interruzione, come le
+esecuzioni da riga di comando o il pannello dei tier.
+
+Le costanti di classe di \texttt{BulkDatasetGenerator}, riportate nel
+\cref{lst:mixin}, definiscono alcuni parametri di funzionamento condivisi
+dalle diverse fasi della generazione.
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Costanti di classe utilizzate dal generatore.},
+    label={lst:mixin}
+]
+class BulkDatasetGenerator(
+    # parameters
+):
+    BUFFER_SIZE = 50
+    MAX_DISCOVERY_WORKERS = 8
+    GENERATION_WORKERS = 4
+    DISCARD_SAMPLES = 500
+    VALUE_REROLLS = 4
+    MAX_STORED_VALUES = 5000
+    SAMPLING_GIVEUP_STREAK = 25
+\end{lstlisting}
+
+In particolare, tali parametri controllano la dimensione del buffer di
+scrittura, il grado di parallelismo utilizzato durante la scoperta e la
+generazione, il numero massimo di valori conservati per proprietà e la soglia
+di tentativi consecutivi senza successo oltre la quale il campionamento viene
+interrotto. A questi si aggiungono i parametri relativi alla resilienza delle
+chiamate di rete, costituiti da un timeout di base di 15 secondi, fino a due
+ripetizioni in caso di fallimento e un secondo di attesa tra un tentativo e
+l'altro.
+
+\subsection{Scoperta della mappa del grafo}
+\label{sec:impl-discovery}
+
+Prima di generare qualunque record, il sistema costruisce un'unica mappa
+completa delle proprietà e delle relazioni disponibili per ciascuna entità
+dello schema, interrogando l'API interna della piattaforma CVL. Questa mappa
+viene costruita una sola volta e riutilizzata per tutti i tier, evitando di
+ripetere le stesse chiamate di rete per entità che compaiono in più
+raggruppamenti tematici. Il dettaglio implementativo di come l'API venga
+interrogata non è discusso in questa sede, trattandosi di un'interfaccia
+della piattaforma CVL e non di un contributo originale di questa tesi;
+qui rileva solo il risultato che il generatore ne ricava, riportato in forma
+semplificata nel \cref{lst:graph-map}: per ogni entità, l'insieme delle sue
+proprietà filtrabili (\texttt{properties}) e delle entità verso cui può
+proseguire una relazione (\texttt{relations}).
+
+\begin{lstlisting}[language=Python, caption={Struttura semplificata della mappa del grafo, ridotta a titolo esemplificativo a una sola proprietà e una sola relazione dell'entità Patient.}, label={lst:graph-map}]
+graph_map = {
+    "properties": {
+        "Patient": [
+            {
+                "predicate": {"value": "has_gender", "label": "gender"},
+                "datatype": "string",
+                "n_values": 2,
+                "values": [
+                    {"value": "F", "label": "Female"},
+                    {"value": "M", "label": "Male"},
+                ],
+            },
+        ],
+    },
+    "relations": {
+        "Patient": [
+            {"predicate": {"value": "has_diagnosis", "label": "diagnosis"},
+             "target": {"value": "Diagnosis", "label": "Diagnosis"}},
+        ],
+    },
+}
+\end{lstlisting}
+
+Ogni proprietà filtrabile porta con sé, oltre al predicato che la
+identifica, il tipo di dato, il numero di valori distinti disponibili
+(\texttt{n\_values}) e i valori stessi, già raccolti in questa fase
+(fino al tetto \texttt{MAX\_STORED\_VALUES} descritto più sotto); ogni
+relazione porta invece il predicato usato per il salto e l'entità di
+destinazione (\texttt{target}).
+
+La scelta di indicizzare entrambe le sezioni per nome di entità, invece di
+usare una singola lista di record, non è casuale. La mappa viene infatti
+interrogata ripetutamente durante la scoperta delle route
+(\cref{sec:impl-routes}), una volta per ciascuna coppia entità-tier
+esplorata, e un dizionario permette di recuperare le proprietà o le
+relazioni di una data entità in tempo costante, invece di dover scorrere
+l'intera struttura ogni volta.
+
+Costruire la mappa una volta sola, prima di iniziare qualunque generazione,
+comporta anche un compromesso più ampio. Quando viene aperta, ogni entità
+viene interrogata come punto di partenza isolato, con una storia di
+selezione vuota, indipendentemente dal fatto che nell'esplorazione vera
+delle route quella stessa entità venga poi raggiunta attraverso un percorso
+diretto o attraverso più salti relazionali. La mappa assume quindi che le proprietà e le relazioni disponibili per
+un'entità dipendano solo dal suo tipo, non dal percorso concreto con cui la
+si raggiunge, a differenza dell'API di CVL, che può restituire relazioni
+diverse a seconda della storia di selezione accumulata fino a quel punto. Questo costo
+viene accettato deliberatamente, perché l'alternativa, interrogare l'API da
+capo per ogni singola entità di ogni singolo tier che la usa, è proprio il
+collo di bottiglia che si vuole evitare.
+
+Per ridurre il tempo complessivo di questa fase, le interrogazioni relative
+alle diverse opzioni di una stessa entità vengono eseguite in parallelo,
+fino a un massimo configurabile per volta (\texttt{MAX\_DISCOVERY\_WORKERS}),
+tramite un pool di thread; i valori restituiti per ciascuna proprietà
+filtrabile vengono conservati fino a un tetto massimo
+(\texttt{MAX\_STORED\_VALUES}), per non tenere in memoria un elenco
+potenzialmente enorme quando un campo ammette moltissimi valori distinti.
+
+\subsection{Costruzione delle route}
+\label{sec:impl-routes}
+
+Con la mappa disponibile, per ciascuna entità radice di un tier, si esplora
+tramite una visita in profondità (DFS) ogni combinazione raggiungibile di salti
+relazionali fino al limite imposto dal tier stesso.
+
+\begin{lstlisting}[language=Python, caption={Visita in profondità della mappa del grafo per la costruzione delle route disponibili a partire da un'entità radice.}, label={lst:dfs}]
+def dfs(type_value, chain, relations_used, visited, ancestor_terminals):
+    terminals = [
+        {"predicate": p["predicate"], "chain_prefix": list(chain), ...}
+        for p in properties.get(type_value, [])
+    ]
+    if terminals:
+        routes.append({
+            "chain": list(chain),
+            "terminals": ancestor_terminals
+                + [{**t, "is_final_entity": True} for t in terminals],
+        })
+
+    if relations_used >= max_relations:
+        return
+    inherited = ancestor_terminals + [{**t, "is_final_entity": False} for t in terminals]
+    for rel in relations.get(type_value, []):
+        target_value = (rel.get("target") or {}).get("value")
+        if not target_value or target_value in visited:
+            continue
+        dfs(
+            target_value,
+            [*chain, {"predicate": rel["predicate"], "reference_to": rel.get("target")}],
+            relations_used + 1, visited | {target_value}, inherited,
+        )
+\end{lstlisting}
+
+Ogni volta che la visita raggiunge un nodo con proprietà filtrabili, viene
+registrata una \emph{route}, ovvero l'insieme di:
+
+\begin{itemize}
+    \item la sequenza di salti relazionali per raggiungerlo (la \emph{chain});
+    \item l'insieme delle proprietà disponibili in quel punto (i \emph{terminal}), che include sia quelle del nodo corrente sia quelle ereditate dai nodi attraversati in precedenza.
+\end{itemize}
+
+La distinzione dei terminal in proprietà ereditate e non (tramite variabile
+booleana) garantisce, nel passo successivo di campionamento, che ogni
+combinazione di proprietà scelta includa almeno un vincolo sul nodo in cui la
+route si ferma davvero, evitando di costruire query che vincolano solo nodi di
+passaggio.
+
+Sebbene la visita che le genera sia intrinsecamente ad albero, l'insieme delle
+route risultanti viene appiattito in una singola lista di record indipendenti
+per facilitare la fase di campionamento (\cref{sec:impl-planning}), la quale
+deve poter scorrere ed estrarre a caso qualunque route tra tutte quelle
+disponibili, con accesso diretto e costante a ciascuna, senza dover ripercorrere
+un albero ogni volta per ricostruire chain e terminal di un nodo scelto
+casualmente al suo interno.
+
+\subsection{Pianificazione: stima combinatoria e campionamento}
+\label{sec:impl-planning}
+
+Prima di generare i record, il sistema calcola quante coppie prompt-query
+distinte siano effettivamente raggiungibili con le route disponibili e i
+vincoli del tier, in modo da non richiedere più record di quanti lo spazio
+combinatorio possa realmente offrire; solo dopo, campiona a caso tra le
+combinazioni così stimate per costruire ogni singolo record.
+
+\subsubsection{Stima combinatoria}
+
+Sia $r$ una route, chiamiamo $T_r$ l'insieme dei terminal raggiungibili lungo
+$r$, compresi quelli dei nodi intermedi, e $T_r^f \subseteq T_r$ il
+sottoinsieme dei terminal finali, cioè quelli che appartengono davvero al nodo
+dove la route si ferma. \\Sia $v(t)$ il numero di combinazioni di valori che il
+singolo terminal $t$ ammette da solo, determinato dal suo tipo di dato e dai
+limiti $\mathit{min\_values}$/$\mathit{max\_values}$ imposti alla generazione;
+\\Sia $\mathcal{C}_k(T_r)$ l'insieme di tutte le scelte di $k$ terminal tra
+quelli di $T_r$ che includono almeno un terminal di $T_r^f$. \\Con
+$\mathit{p_{\min}}$ e $\mathit{p_{\max}}$ i limiti
+$\mathit{min\_properties}$/$\mathit{max\_properties}$ del tier, il peso
+combinatorio di $r$ è
+
+\begin{equation}
+    \label{eq:route-weight}
+    w(r) \;=\;
+    \begin{cases}
+        0 & \text{se } T_r^f = \emptyset \\[4pt]
+        \displaystyle\sum_{k=\mathit{p_{\min}}}^{\min(\mathit{p_{\max}},\,|T_r|)}
+        \;\sum_{c \,\in\, \mathcal{C}_k(T_r)} \;\prod_{t \,\in\, c} v(t)
+          & \text{altrimenti.}
+    \end{cases}
+\end{equation}
+
+La formula conta le selezioni di proprietà che il generatore può costruire su
+quella route. Fissata una taglia $k$, per ogni scelta $c$ di $k$ terminal il
+prodotto $\prod_{t \in c} v(t)$ conta le combinazioni di valori disponibili
+scegliendo insieme tutti i terminal di $c$, perché il valore di un terminal si
+sceglie indipendentemente da quello degli altri; la somma su
+$c \in \mathcal{C}_k(T_r)$ totalizza questo conteggio su ogni scelta possibile
+di $k$ terminal; la somma su $k$ ripete il tutto per ogni dimensione di scelta
+ammessa dal tier.
+
+Il caso $w(r) = 0$ è lo stesso principio
+portato all'estremo, ed esclude le route il cui nodo finale non possiede
+terminal propri, coerentemente con quanto già discusso in
+\cref{sec:impl-routes}.
+
+Un record, però, spesso combina più route insieme, non una sola. Sia $V$
+l'insieme delle route con peso non nullo, e sia $\mathrm{indip}(S)$ vera
+quando nessuna coppia di route nell'insieme $S$ ha una chain prefisso
+dell'altra (\cref{sec:impl-routes}). Con $\mathit{s_{\min}}$ e
+$\mathit{s_{\max}}$ i limiti $\mathit{min\_paths}$/$\mathit{max\_paths}$ del
+tier, il tetto teorico complessivo dell'entità è
+
+\begin{equation}
+    \label{eq:ceiling}
+    N \;=\; \sum_{s=\mathit{s_{\min}}}^{\mathit{s_{\max}}}
+    \;\sum_{\substack{S \subseteq V \\ |S|=s \\ \mathrm{indip}(S)}}
+    \;\prod_{r \,\in\, S} w(r).
+\end{equation}
+
+Stessa lettura di \cref{eq:route-weight}, un livello più in su: il prodotto
+$\prod_{r \in S} w(r)$ combina i pesi delle route in un insieme specifico
+$S$, perché scegliere i dettagli di una route è una decisione indipendente
+da quella di un'altra route nello stesso record; la somma su $S$ totalizza
+questo conteggio su ogni insieme indipendente di $s$ route; la somma su $s$
+ripete il tutto per ogni numero di route ammesso dal tier. La condizione
+$\mathrm{indip}(S)$ svolge qui il ruolo che il vincolo su $T_r^f$ svolge
+nell'equazione precedente: due route di cui una è prefisso dell'altra
+descrivono in parte lo stesso cammino, e combinarle nello stesso record
+produrrebbe duplicati.
+
+Va precisato che \cref{eq:ceiling} fornisce una sovrastima, non un conteggio
+esatto. Poiché $T_r$ comprende anche i terminal dei nodi intermedi, due route
+indipendenti che condividono un prefisso condividono anche quei terminal: il
+prodotto dei pesi le tratta come scelte separate, e uno stesso record può
+quindi essere contato più di una volta. Per l'uso che se ne fa, cioè
+riconoscere quando lo spazio delle combinazioni è troppo piccolo rispetto al
+numero di record richiesti, un limite superiore è sufficiente.
+
+Per evitare di eseguire un calcolo combinatorio troppo costoso quando lo
+spazio è già enorme, il conteggio esatto viene abbandonato non appena il
+numero di combinazioni da esaminare supera una soglia fissa (500\,000); in
+quel caso il campionamento procede senza un tetto teorico noto in anticipo.
+
+\subsubsection{Campionamento}
+
+\begin{lstlisting}[language=Python, caption={Campionamento casuale di un insieme di route indipendenti tra loro per un singolo record.}, label={lst:sample-combo}]
+def sample_independent_combo(target_p):
+    pool = list(valid)
+    rng.shuffle(pool)
+    chosen, chosen_keys = [], []
+    for r in pool:
+        if len(chosen) >= target_p:
+            break
+        key = chain_key_of[id(r)]
+        if not routes_mod.conflicts(chosen_keys, key):
+            chosen.append(r)
+            chosen_keys.append(key)
+    return tuple(chosen)
+\end{lstlisting}
+
+Per ogni record da generare, il numero di route da combinare viene scelto a
+caso entro i limiti del tier, poi le route vengono estratte da un elenco
+mescolato in ordine casuale, scartando quelle che risultano \emph{in
+    conflitto} con una già scelta, cioè la cui chain è un prefisso di un'altra
+già selezionata, il che indicherebbe due vincoli ridondanti sullo stesso
+tratto di percorso (\cref{lst:sample-combo}). Il campionamento continua finché
+non si raggiunge il numero di record stimato dal tetto teorico
+(\cref{eq:ceiling}), oppure finché
+250 tentativi consecutivi (\texttt{SAMPLING\_GIVEUP\_STREAK}) non producono
+nulla di nuovo, segno che lo spazio raggiungibile è stato esaurito.
+
+Questa modalità di campionamento casuale (\texttt{\_run\_sampled}) non è
+l'unica prevista dal codice: esiste anche una modalità a forza bruta
+(\texttt{\_run\_brute\_force}) che enumera esaustivamente ogni combinazione
+possibile di route e proprietà, senza campionamento casuale, per i casi in cui
+si desideri una copertura completa dello spazio combinatorio invece di un
+sottoinsieme. Poiché ogni tier, in entrambe le configurazioni descritte in
+\cref{sec:impl-tiers}, specifica sempre un \texttt{sample\_size\_per\_entity},
+la modalità a forza bruta non è mai stata usata nei run di produzione: la
+selezione tra le due modalità avviene automaticamente in base alla presenza o
+assenza di questo parametro.
+
+\subsection{Esecuzione sequenziale e parallela}
+\label{sec:impl-execution}
+
+Una volta pianificata una combinazione da trasformare in record, la sua
+esecuzione effettiva, che comporta le chiamate di rete verso l'API del CVL,
+può avvenire in sequenza o in parallelo su più thread, a seconda della
+configurazione.
+
+\begin{lstlisting}[language=Python, caption={Scelta tra esecuzione sequenziale e parallela in base al numero di worker configurati.}, label={lst:workers}]
+workers = max(1, int(self.config.get("num_workers") or self.GENERATION_WORKERS))
+if workers <= 1:
+    self._run_jobs_sequential(jobs_iter, total_pairs, p, target, max_no_new)
+    return
+\end{lstlisting}
+
+Se il numero di worker configurato è maggiore di uno, le combinazioni
+campionate vengono distribuite su un pool di thread (fino a
+\texttt{GENERATION\_WORKERS}, 4 di default), mantenendo una finestra di lavori
+sottomessi contemporaneamente per non lasciare i worker inattivi tra un
+risultato e il successivo. Nei run di produzione, tuttavia, il numero di
+worker è stato impostato esplicitamente a 1 (\cref{lst:common-config}),
+disattivando di fatto il parallelismo in questa fase: ogni record è stato
+generato in sequenza, uno alla volta.
+
+Quando invece il parallelismo è attivo, sia in questa fase sia nella
+scoperta della mappa (\cref{sec:impl-discovery}), lo stato condiviso tra i
+thread non è protetto da un unico lock globale, ma da quattro lock
+distinti, ciascuno a guardia di una porzione di stato diversa: uno per gli
+insiemi di deduplicazione, uno per la cache dello scheletro
+(\cref{sec:impl-skeleton}), uno per le statistiche interne sulle chiamate
+effettuate, e uno per il registro dei job attualmente in esecuzione. Questa
+granularità evita che un thread debba attendere l'accesso a una struttura
+dati con cui non ha nulla a che fare, solo perché un altro thread sta, nello
+stesso istante, aggiornandone una completamente diversa.
+
+\subsection{Costruzione dello scheletro: percorso online e offline}
+\label{sec:impl-skeleton}
+
+Ogni combinazione campionata deve essere tradotta in una struttura dati
+intermedia, chiamata \emph{scheletro}, che rappresenta i nodi del grafo
+coinvolti nella query, prima ancora che i valori concreti vengano scelti. Il
+sistema offre due percorsi alternativi per costruirla, insieme ad altre
+opzioni di comportamento, tutte raccolte in un'unica configurazione condivisa
+da entrambe le liste di tier (\cref{lst:common-config}).
+
+\begin{lstlisting}[language=Python, caption={Configurazione condivisa usata nei run di produzione, per entrambe le liste di tier.}, label={lst:common-config}]
+COMMON_CONFIG = {
+    "num_workers": 1,
+    "offline_history": True,
+    "include_value_spans": True,
+    "skip_navigation_in_prompt": False,
+    "validate_sparql": False,
+}
+\end{lstlisting}
+
+Con \texttt{offline\_history} attivo, lo scheletro viene ricostruito
+interamente in locale, senza alcuna chiamata di rete, a partire dai dati già
+raccolti durante la scoperta della mappa (\cref{lst:offline-skeleton}).
+
+\begin{lstlisting}[language=Python, caption={Ricostruzione locale dello scheletro a partire dai dati già noti dalla mappa del grafo.}, label={lst:offline-skeleton}]
+def build_skeleton(root_type, terminal_groups):
+    for index, terminals in enumerate(terminal_groups):
+        nodes = []
+        for term in terminals:
+            nodes.append(_empty_node(root_type))
+            for hop in term.get("chain_prefix", []):
+                nodes[-1]["predicate"] = hop["predicate"]
+                nodes[-1]["reference_to"] = hop.get("reference_to")
+                nodes.append(_empty_node(hop.get("reference_to")))
+            nodes[-1]["predicate"] = term["predicate"]
+            nodes[-1]["reference_to"] = term.get("reference_to")
+            nodes[-1]["datatype"] = term.get("datatype")
+            slots.append((index, len(nodes) - 1, term, list(term.get("values") or [])))
+\end{lstlisting}
+
+Per ciascun terminal, la funzione ricostruisce la stessa sequenza di nodi che
+un'esplorazione dal vivo produrrebbe, usando la \texttt{chain\_prefix} e i
+valori già memorizzati nel terminal stesso durante la fase di scoperta. Il
+percorso alternativo, disponibile disattivando questa opzione, cammina invece
+passo per passo dentro l'API interattiva del CVL, con una cache condivisa dei
+terminal che risultano irraggiungibili (\emph{morti}), per non ripetere
+inutilmente gli stessi tentativi falliti in record successivi; questo
+percorso non è mai stato usato nei run di produzione, dato il valore di
+\texttt{offline\_history} in \cref{lst:common-config}. Indipendentemente dal
+percorso scelto per lo scheletro, il testo effettivo della query SPARQL viene
+sempre ottenuto con un'unica chiamata finale all'API, che traduce la
+struttura accumulata in una query eseguibile: questo passaggio non è mai
+eseguito localmente, in nessuna delle due modalità: il risparmio della
+modalità offline riguarda quindi solo le numerose chiamate necessarie per
+esplorare le singole proprietà, non la chiamata finale che restituisce la
+query vera e propria.
+
+\subsection{Riempimento dei valori}
+\label{sec:impl-values}
+
+Una volta pronto lo scheletro, ogni suo nodo vuoto viene riempito con valori
+concreti scelti a caso dal pool associato al terminal corrispondente.
+
+\begin{lstlisting}[language=Python, caption={Riempimento di un nodo dello scheletro con valori concreti, distinguendo tra intervalli e insiemi discreti.}, label={lst:fill-node}]
+def fill_node(node, term, pool, min_values, max_values):
+    k = random.randint(min_values, min(max_values, len(pool)))
+    chosen = random.sample(pool, k)
+    if _is_range_datatype(term.get("datatype")):
+        ordered = sorted(chosen, key=lambda v: v["value"])
+        node["value_range"] = {"min": ordered[0]["value"], "max": ordered[-1]["value"]}
+    else:
+        node["values"] = chosen
+\end{lstlisting}
+
+Il numero di valori da usare per un dato vincolo è scelto a caso entro i
+limiti del tier (\cref{lst:fill-node}), con una regola esplicita: non si
+seleziona mai l'intero dominio possibile di un campo, perché un vincolo che
+copre tutti i valori ammessi non esclude di fatto nessun paziente e risulta
+quindi privo di potere selettivo. Se il campo è una data o un valore
+numerico, i valori scelti vengono usati per costruire un intervallo anziché
+un elenco discreto.
+
+\subsection{Generazione del prompt e tracciamento degli span}
+\label{sec:impl-phrasing}
+
+Con lo scheletro completo di valori, il testo del prompt viene costruito
+segmento per segmento, tenendo traccia della posizione esatta di ogni valore
+letterale mentre il testo viene assemblato, non cercandola a posteriori. Se
+la posizione venisse invece ricavata cercando il valore nel testo finale già
+completo, un valore che comparisse per coincidenza anche altrove nella
+frase, ad esempio una data o un numero che si ripete in un punto non
+correlato, renderebbe ambigua la ricerca: tracciare la posizione nel momento
+esatto in cui il segmento viene scritto elimina questa ambiguità alla
+radice, perché non serve mai indovinare quale occorrenza sia quella giusta.
+
+\begin{lstlisting}[language=Python, caption={Costruzione del prompt segmento per segmento, con tracciamento diretto della posizione di ciascun valore letterale.}, label={lst:build-prompt}]
+def build_prompt_with_spans(root_label, history, skip_navigation=False):
+    segments = _prompt_segments(root_label, history, skip_navigation)
+    pieces, spans = [], []
+    for is_value, text in segments:
+        if is_value:
+            base = sum(len(p) for p in pieces)
+            spans.append((base, base + len(text)))
+        pieces.append(text)
+    return "".join(pieces), spans
+\end{lstlisting}
+
+Ogni nodo dello scheletro viene prima tradotto in una lista di segmenti,
+ciascuno marcato come valore letterale o come struttura di frase (parole di
+collegamento come \emph{with}, \emph{and}, \emph{or}). Scorrendo questi
+segmenti nell'ordine in cui verranno scritti, la posizione di inizio di un
+segmento marcato come valore è calcolata sommando le lunghezze di tutti i
+segmenti già accumulati, calcolata \emph{prima} di aggiungerlo al testo
+(\cref{lst:build-prompt}). Il risultato di questa funzione è esattamente la
+coppia \texttt{(prompt, value\_spans)} salvata per ogni record, e le stesse
+coordinate sono quelle su cui opera il mascheramento nello stadio successivo
+di augmentation, descritto nella sezione seguente.
+
+\subsection{Controlli di qualità e deduplicazione}
+\label{sec:impl-output}
+
+Prima di essere salvata, ogni coppia prompt-query attraversa tre controlli in
+sequenza.
+
+\begin{lstlisting}[language=Python, caption={Verifica che i vincoli scelti siano effettivamente presenti nella query SPARQL restituita.}, label={lst:filters-landed}]
+def _filters_landed(sparql, chosen_values):
+    if "FILTER" in sparql or "VALUES" in sparql:
+        return True
+    return any(v in sparql for v in chosen_values)
+\end{lstlisting}
+
+Il primo controllo (\cref{lst:filters-landed}) verifica che la query
+restituita dall'API contenga effettivamente una clausola \texttt{FILTER} o
+\texttt{VALUES}, oppure almeno uno dei valori letterali scelti: se nessuna
+delle due condizioni è soddisfatta, il record viene scartato con il motivo
+esplicito \emph{"the backend ignored our filters"}.
+
+\begin{lstlisting}[language=Python, caption={Il controllo sintattico tramite \texttt{rdflib} è condizionato dalla configurazione.}, label={lst:validate-sparql}]
+syntax_error = (
+    validate.sparql_error(sparql)
+    if self.config.get("validate_sparql", True) else None
+)
+\end{lstlisting}
+
+Il secondo controllo verificherebbe la validità sintattica della query
+tramite un vero parser SPARQL (la libreria
+\texttt{rdflib}\footnote{\url{https://rdflib.readthedocs.io/}}), ma è
+condizionato dal parametro \texttt{validate\_sparql}
+(\cref{lst:validate-sparql}), che nei run di produzione era impostato a falso
+(\cref{lst:common-config}): nessuna query è quindi mai stata scartata per un
+errore di sintassi, e su questo fronte sono rimasti attivi solo i controlli
+sui filtri atterrati e sui duplicati. Il terzo controllo verifica che la
+coppia non sia un duplicato, né come solo prompt né come combinazione di
+prompt e query insieme; in caso di prompt duplicato, il sistema ritenta con
+nuovi valori scelti a caso fino a 4 volte (\texttt{VALUE\_REROLLS}) prima di
+scartare definitivamente il tentativo. Solo le coppie che superano i
+controlli attivi vengono accumulate in un buffer e scritte su disco a gruppi
+di 50 (\texttt{BUFFER\_SIZE}).
+
+\subsection{Le due configurazioni di tier}
+\label{sec:impl-tiers}
+
+Il generatore non lavora su un'unica configurazione fissa, ma su due elenchi
+di tier alternativi, applicati in due passate di generazione separate sullo
+stesso insieme di 45 entità. \texttt{TIERS} raggruppa le entità per distanza
+dal nodo \texttt{Patient} nel grafo (i sei livelli discussi in
+\cref{chap:progettazione}); \texttt{SECOND\_TIERS} raggruppa le stesse entità
+per tema clinico (\emph{demographics}, \emph{diagnosis\_staging},
+\emph{treatment}, \emph{measurements\_labs}, \emph{symptoms},
+\emph{services}). Il commento nel codice sorgente motiva esplicitamente questa
+scelta: raggruppamenti diversi fanno finire entità diverse nella stessa query
+multi-relazione, quindi anche un'entità già coperta nella prima passata
+compare, nella seconda, in combinazioni differenti, ottenendo varietà
+genuina invece di ricampionare gli stessi pattern di co-occorrenza già visti.
+
+Oltre al criterio di raggruppamento, le due configurazioni differiscono anche
+nei parametri di generazione: mentre in \texttt{TIERS} il numero di proprietà
+vincolate per record varia entro un intervallo (tipicamente 1--3), in
+\texttt{SECOND\_TIERS} ogni gruppo impone \texttt{min\_properties} e
+\texttt{max\_properties} uguali tra loro (sempre 4), producendo record
+strutturalmente più complessi e uniformi in numero di vincoli rispetto alla
+prima passata.
+
+Nella prima versione dello strumento, \texttt{TIERS} e \texttt{SECOND\_TIERS}
+erano gli unici due punti di ingresso possibili: due liste Python scritte a
+mano direttamente nel codice sorgente, senza alcuna interfaccia per
+modificarle o per provarne una terza. L'unico strumento interattivo
+disponibile permetteva di esplorare una singola entità alla volta con degli
+slider, senza alcun collegamento con il concetto di tier: i valori numerici
+delle due liste erano stati determinati esplorando le entità una per una con
+questo strumento, per poi essere trascritti a mano nei due elenchi fissi:
+un processo non documentato né riproducibile automaticamente.
+
+\subsection{Configurazione dei tier da file esterno}
+\label{sec:impl-tier-config}
+
+Per superare questa limitazione, il generatore accetta ora una configurazione
+di tier alternativa, fornita come file JSON esterno invece che scritta nel
+codice sorgente. La struttura richiesta è la stessa dei due elenchi
+predefiniti (\cref{lst:tier-validate}): un insieme fisso di chiavi
+obbligatorie per ciascun gruppo, controllate prima di avviare qualunque
+generazione.
+
+\begin{lstlisting}[language=Python, caption={Validazione di una configurazione di tier caricata da file esterno, prima di avviare la generazione.}, label={lst:tier-validate}]
+REQUIRED_TIER_KEYS = {
+    "name", "sample_size_per_entity", "min_relations", "max_relations",
+    "min_paths", "max_paths", "min_properties", "max_properties",
+    "min_values", "max_values", "entities",
+}
+
+def validate_tier_config(tiers) -> None:
+    if not isinstance(tiers, list) or not tiers:
+        raise ValueError("expected a non-empty JSON list of tier objects")
+    seen_names = set()
+    for i, tier in enumerate(tiers):
+        if not isinstance(tier, dict):
+            raise ValueError(f"tier #{i + 1} is not an object")
+        missing = REQUIRED_TIER_KEYS - tier.keys()
+        if missing:
+            raise ValueError(f"tier #{i + 1} is missing: {', '.join(sorted(missing))}")
+        if tier["name"] in seen_names:
+            raise ValueError(f"duplicate tier name: {tier['name']!r}")
+        seen_names.add(tier["name"])
+        if tier["min_relations"] > tier["max_relations"]:
+            raise ValueError(f"tier {tier['name']!r}: min_relations > max_relations")
+        # ... same check repeated for paths, properties and values
+\end{lstlisting}
+
+Oltre alla presenza di tutte le chiavi richieste, la funzione verifica che
+ogni intervallo dichiarato sia coerente (nessun \texttt{min} maggiore del
+corrispondente \texttt{max}) e che non vi siano due gruppi con lo stesso
+nome, restituendo un messaggio d'errore specifico invece di un'eccezione
+generica non gestita. La funzione \texttt{run\_all}
+(\cref{sec:impl-execution}) accetta ora un parametro \texttt{tiers}
+opzionale, che sostituisce \texttt{SECOND\_TIERS} quando fornito esplicitamente,
+mantenendo però quest'ultimo come valore di default per non alterare il
+comportamento da riga di comando già in uso.
+
+Questa configurazione esterna è esposta, sul lato dell'interfaccia
+Streamlit, tramite un pannello dedicato che permette di caricare il file,
+ne mostra a schermo un riepilogo (numero di gruppi ed entità coinvolte) prima
+di abilitare il pulsante di avvio, e traduce l'avanzamento della generazione
+in una barra di progresso calcolata sul numero di entità completate rispetto
+al totale, invece del solo log testuale disponibile in precedenza. L'output
+finale non viene più scritto in un percorso scelto dall'utente: viene reso
+disponibile direttamente come file scaricabile al termine del processo,
+eliminando la necessità di un qualunque accesso al filesystem del server per
+chi utilizza lo strumento.
+
+\subsection{Split del dataset}
+\label{sec:impl-split}
+
+Una volta che tutte le entità dei tier configurati sono state processate e
+unite in un unico file, l'ultimo passo divide i record in train, validation
+e test.
+
+\begin{lstlisting}[language=Python, caption={Suddivisione del dataset in train, validation e test, stratificata per entità di origine.}, label={lst:split}]
+for entity, recs in by_entity.items():
+    rng.shuffle(recs)
+    n = len(recs)
+    n_val = max(1, round(n * SPLIT_RATIOS["val"])) if n >= 10 else 0
+    n_test = max(1, round(n * SPLIT_RATIOS["test"])) if n >= 10 else 0
+    n_train = n - n_val - n_test
+    splits["train"].extend(recs[:n_train])
+    splits["val"].extend(recs[n_train:n_train + n_val])
+    splits["test"].extend(recs[n_train + n_val:])
+\end{lstlisting}
+
+Una volta generato l'intero dataset, i record vengono raggruppati per entità
+di origine e suddivisi in train, validation e test separatamente per ciascun
+gruppo, con proporzioni 80/10/10 e seme fisso per la riproducibilità
+(\cref{lst:split}). Le entità con meno di 10 record totali non vengono
+suddivise: finiscono interamente in train, poiché un campione così piccolo
+non permetterebbe una validazione o un test statisticamente significativi.
+Questa stratificazione garantisce che ogni entità sia rappresentata nella
+stessa proporzione in tutti e tre gli split, evitando che un'entità poco
+frequente finisca per puro caso quasi interamente in uno solo di essi.
+
+\section{Implementazione dell'augmentation}
+\label{sec:impl-augmentation}
+
+\subsection{Generazione dei placeholder e mascheramento}
+\label{sec:impl-mask}
+
+Il primo passo di ogni record è la sostituzione di ciascun valore letterale
+con un token opaco (\cref{lst:mask}).
+
+\begin{lstlisting}[language=Python, caption={Generazione dei placeholder e mascheramento del testo a partire dagli span di valore.}, label={lst:mask}]
+TOKEN_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+def generate_placeholder_tokens(n):
+    tokens = set()
+    while len(tokens) < n:
+        tokens.add("[VAL_" + "".join(random.choices(TOKEN_ALPHABET, k=4)) + "]")
+    return list(tokens)
+
+def mask(text, spans):
+    spans = sorted(spans)
+    tokens = generate_placeholder_tokens(len(spans))
+    mapping, pieces, cursor = {}, [], 0
+    for (start, end), placeholder in zip(spans, tokens):
+        pieces.append(text[cursor:start])
+        mapping[placeholder] = text[start:end]
+        pieces.append(placeholder)
+        cursor = end
+    pieces.append(text[cursor:])
+    return "".join(pieces), mapping
+\end{lstlisting}
+
+L'alfabeto dei token esclude deliberatamente i caratteri facilmente
+confondibili tra loro a colpo d'occhio (\texttt{I}, \texttt{L}, \texttt{O},
+\texttt{0}, \texttt{1}); i token vengono generati dentro un insieme
+(\texttt{set}) finché non se ne hanno abbastanza di univoci, escludendo così
+collisioni tra due placeholder nello stesso record. La funzione \texttt{mask}
+opera direttamente sugli span di posizione prodotti dal generatore
+(\cref{sec:impl-phrasing}), tagliando il testo esattamente su quelle
+coordinate senza alcuna ricerca a posteriori. Due funzioni di regex ricorrono
+in tutto il modulo per riconoscere i placeholder, con scopi diversi: una
+versione rigida (\texttt{VAL\_RE}), che combacia solo con il formato esatto
+appena mostrato, usata per estrarre i placeholder autentici da un testo; e
+una versione permissiva (\texttt{LOOSE\_VAL\_RE}), che riconosce anche forme
+storpiate o inventate, usata in fase di validazione per intercettare
+allucinazioni del modello (\cref{sec:impl-validation}).
+
+\subsection{Riformulazione booleana e suggerimenti naturali}
+\label{sec:impl-boolean-hints}
+
+Non tutti i placeholder attraversano l'intera pipeline di generazione: i
+valori booleani vengono eliminati subito, prima ancora di contattare il
+modello (\cref{lst:boolean}).
+
+\begin{lstlisting}[language=Python, caption={Eliminazione anticipata dei placeholder booleani, sostituiti con una forma proposizionale.}, label={lst:boolean}]
+def simplify_boolean_phrasing(text, mapping):
+    new_mapping = dict(mapping)
+    for placeholder, value in mapping.items():
+        if value.lower() not in {"true", "false"}:
+            continue
+        is_true = value.lower() == "true"
+        repl = r"with \1" if is_true else r"without \1"
+        esc = re.escape(placeholder)
+        stop = r"(?:with|which|and)"
+        which_re = re.compile(rf"\bwhich ((?:(?!{stop}\b)\w+ ?){{1,5}}) is {esc}", re.IGNORECASE)
+        with_re = re.compile(rf"\bwith ((?:(?!{stop}\b)\w+ ?){{1,5}}) {esc}", re.IGNORECASE)
+        if which_re.search(text):
+            text = which_re.sub(repl, text)
+            del new_mapping[placeholder]
+        elif with_re.search(text):
+            text = with_re.sub(repl, text)
+            del new_mapping[placeholder]
+    return text, new_mapping
+\end{lstlisting}
+
+Un placeholder che rappresenta un valore vero viene sostituito con \emph{"with"}
+seguito dal termine clinico associato, uno falso con \emph{"without"}; in
+entrambi i casi il placeholder viene rimosso anche dalla mappa restituita, non
+solo dal testo, così il resto della pipeline non si aspetta più di doverlo
+ritrovare. Per tutti gli altri valori mascherati, una funzione separata
+(\texttt{build\_hint\_map}) prepara un suggerimento in linguaggio naturale, in
+ordine di priorità: data ISO trasformata in forma scritta per esteso, numero
+piccolo (fino a 999) trasformato in lettere, etichetta composta con trattino
+ridotta alla sola parte specifica; solo se nessuna di queste regole
+deterministiche si applica, viene interrogato il modello per un sinonimo
+d'uso comune. Questo suggerimento viene usato, con una probabilità
+configurabile, al momento del ripristino finale dei valori
+(\cref{sec:impl-validation}), e in modo differente nella modalità priva di
+mascheramento (\cref{sec:impl-nomask}).
+
+\subsection{Suddivisione in chunk per record complessi}
+\label{sec:impl-chunk}
+
+Un record con molti valori mascherati viene spezzato in più porzioni prima di
+essere sottoposto al modello, per evitare il degrado di qualità osservato
+empiricamente oltre una certa densità di placeholder in una singola chiamata.
+
+\begin{lstlisting}[language=Python, caption={Suddivisione del testo mascherato in chunk, rispettando il vincolo sugli intervalli \emph{between...and...}.}, label={lst:chunk}]
+MAX_VALUES_PER_CHUNK = 12
+
+def split_into_chunks(masked_text, mapping, max_values_per_chunk):
+    clauses = _protect_between(masked_text).split(CLAUSE_SEP)
+    chunks = [[]]
+    count_in_chunk = 0
+    for clause in clauses:
+        n_values = len(VAL_RE.findall(clause))
+        if count_in_chunk > 0 and count_in_chunk + n_values > max_values_per_chunk:
+            chunks.append([])
+            count_in_chunk = 0
+        chunks[-1].append(clause)
+        count_in_chunk += n_values
+    return [_restore_between(CLAUSE_SEP.join(c)) for c in chunks if c]
+\end{lstlisting}
+
+Il testo viene diviso in clausole separate dalla congiunzione \emph{"and"},
+accumulate in un chunk finché non si supererebbe la soglia di 12 valori
+(\texttt{MAX\_VALUES\_PER\_CHUNK}); un meccanismo dedicato
+(\texttt{\_protect\_between}/\texttt{\_restore\_between}) sostituisce
+temporaneamente l'\emph{"and"} interno a un intervallo \emph{"between X and
+    Y"} con un segnaposto interno che non compare mai per caso in un testo
+inglese (il carattere NUL), impedendo che un intervallo venga spezzato a metà
+tra due chunk diversi. Ogni record con un numero di valori pari o inferiore
+alla soglia produce un solo chunk, e non attraversa quindi alcuna
+suddivisione: nel dataset supplementare da 1331 record generato con vincolo
+fisso a 4 proprietà per record (\cref{sec:impl-tiers}), l'80,6\% dei record
+(1073 su 1331) è rimasto in un solo chunk, mentre il restante 19,4\% (258
+record) è stato diviso in due; nessun record ha richiesto più di due chunk,
+nemmeno quello con più valori in assoluto (20 valori, divisi in due chunk da
+11 e 9).
+
+\subsection{Generazione iterativa: stile, retry e fallback}
+\label{sec:impl-generation}
+
+Ogni chunk, e successivamente ogni variante completa, viene generato tramite
+un ciclo di tentativi con feedback esplicito sul motivo di un eventuale
+rifiuto e temperatura crescente (\cref{lst:generate-piece}).
+
+\begin{lstlisting}[language=Python, caption={Ciclo di generazione e validazione per un singolo chunk, con fallback esplicito in caso di fallimento persistente.}, label={lst:generate-piece}]
+def generate_piece(model, piece_text, piece_mapping, style_desc,
+                    max_attempts, base_temp, max_temp,
+                    avoid_history, indent, label,
+                    avoid_text=None, avoid_reason=None,
+                    as_fragment=False, language="English"):
+    total_elapsed = 0.0
+    for attempt in range(max_attempts):
+        temperature = temperature_for_attempt(attempt, max_attempts, base_temp, max_temp)
+        candidate, elapsed = (
+            paraphrase_fragment(model, piece_text, piece_mapping, temperature, language, avoid_text, avoid_reason)
+            if as_fragment else
+            paraphrase_one(model, piece_text, piece_mapping, style_desc, temperature, language,
+                            avoid_text, avoid_reason, avoid_history if attempt == 0 else None)
+        )
+        total_elapsed += elapsed
+        reason = validation_reason(candidate, piece_mapping, [])
+        if reason is None:
+            return candidate, total_elapsed, False
+        avoid_text, avoid_reason = candidate, reason
+    return piece_text, total_elapsed, True
+\end{lstlisting}
+
+Se il candidato viene rifiutato, il testo scartato e il motivo esatto del
+rifiuto diventano il contesto per il tentativo successivo, mentre la
+temperatura sale linearmente dalla base al massimo configurato
+(\texttt{temperature\_for\_attempt}). Se tutti i tentativi (5 di default)
+falliscono, la funzione non forza comunque un output: restituisce il testo
+originale non modificato, segnalando esplicitamente il ricorso a questo
+comportamento di ripiego. Il primo chunk di un record usa il template
+completo, con l'assegnazione di stile e la cronologia delle aperture di frase
+recenti da evitare; i chunk successivi usano un template più semplice \emph{"a
+    frammento"} (\texttt{as\_fragment=True}), senza ripetere l'assegnazione di
+stile, per restare coerenti col registro già stabilito dal primo pezzo. Ogni
+chunk viene validato singolarmente, ma solo sull'integrità dei placeholder:
+il controllo di somiglianza, che richiede un confronto con varianti già
+accettate, si applica soltanto al termine, sul testo ricomposto
+(\cref{sec:impl-validation}).
+
+\subsection{Validazione: due funzioni per due modalità}
+\label{sec:impl-validation}
+
+La validazione di un candidato applica fino a tre criteri in sequenza
+all'interno di un'unica funzione (\cref{lst:validation}), più un quarto
+controllo esterno sulla ripetizione dell'apertura di frase.
+
+\begin{lstlisting}[language=Python, caption={La funzione di validazione condivisa da chunk e varianti complete, con soglia di somiglianza adattiva.}, label={lst:validation}]
+def validation_reason(candidate, mapping, accepted_so_far, max_similarity=None):
+    missing = [p for p in mapping if p not in candidate]
+    if missing:
+        return f"you dropped the placeholder(s) {', '.join(missing)} - every single one must appear unchanged"
+
+    malformed = sorted(set(m for m in LOOSE_VAL_RE.findall(candidate) if m not in mapping))
+    if malformed:
+        return f"you wrote malformed or invented placeholder-like text: {', '.join(malformed)} - placeholders must be copied exactly, never altered"
+
+    threshold = max_similarity if max_similarity is not None else similarity_threshold_for(candidate)
+    for prev in accepted_so_far:
+        ratio = difflib.SequenceMatcher(None, candidate.lower(), prev.lower()).ratio()
+        if ratio >= threshold:
+            return f"this wording is too similar ({ratio:.0%} match) to a variant already produced for this same request"
+    return None
+\end{lstlisting}
+
+Il controllo di somiglianza usa \texttt{difflib.SequenceMatcher}\footnote{\url{https://docs.python.org/3/library/difflib.html}}
+della libreria standard, con una soglia che dipende dalla lunghezza del
+testo: più permissiva (fino al 97\%) per frasi brevi, più severa (85\%) per
+frasi lunghe, altrimenti testi corti verrebbero quasi sempre scartati come
+duplicati per mancanza di margine di variazione lessicale. Poiché questa
+funzione riceve sempre una lista vuota quando è invocata sui singoli chunk,
+il controllo di somiglianza non si attiva mai a quel livello: è un ciclo su
+una lista vuota, non un controllo disattivato esplicitamente.
+
+Per la modalità priva di mascheramento (\cref{sec:impl-nomask}) esiste una
+seconda funzione di validazione, più permissiva sul primo controllo: un
+valore non è considerato perso se compare nella sua forma di suggerimento
+naturale, o come sinonimo plausibile case-insensitive, non solo nella sua
+forma letterale esatta, coerentemente col fatto che, in questa modalità, il
+modello vede il valore vero e ha il permesso esplicito di riformularlo.
+
+\subsection{Rotazione degli stili e memoria anti-ripetizione}
+\label{sec:impl-styles}
+
+La varietà stilistica tra le varianti di uno stesso record è governata da un
+oggetto che assegna gli stili in sequenza fissa e ricorda le generazioni
+recenti per stile (\cref{lst:style-tracker}).
+
+\begin{lstlisting}[language=Python, caption={Assegnazione ciclica degli stili e memoria a finestra delle generazioni recenti.}, label={lst:style-tracker}]
+class StyleTracker:
+    def __init__(self, styles=None, recent_size=3, max_chars=160, opener_window=12):
+        self._styles = styles if styles is not None else STYLES
+        self._style_cycle = itertools.cycle(self._styles)
+        self._recent_texts = {tag: [] for tag, _ in self._styles}
+        self._opener_history = {tag: [] for tag, _ in self._styles}
+
+    def next_style(self):
+        return next(self._style_cycle)
+
+    def remember(self, style_tag, text):
+        sanitized = VAL_RE.sub("...", text)
+        preview = sanitized if len(sanitized) <= self._max_chars else sanitized[:self._max_chars - 3] + "..."
+        bucket = self._recent_texts.setdefault(style_tag, [])
+        bucket.append(preview)
+        del bucket[: -self._recent_size]
+        openers = self._opener_history.setdefault(style_tag, [])
+        openers.append(opener(text))
+        del openers[: -self._opener_window]
+\end{lstlisting}
+
+Gli stili (dieci registri predefiniti, da tecnico-database a colloquiale a
+statistico) vengono assegnati percorrendo un ciclo fisso
+(\texttt{itertools.cycle}\footnote{\url{https://docs.python.org/3/library/itertools.html\#itertools.cycle}}),
+non estratti a caso, per garantire una distribuzione uniforme su un numero
+elevato di record. \texttt{remember} viene chiamata solo su varianti
+accettate, mai su tentativi rifiutati: tiene una finestra delle ultime 3
+formulazioni complete per stile (con i placeholder ancora presenti sostituiti
+da \texttt{"..."}, per non confrontare mai codici opachi come se fossero
+testo naturale) e una finestra più ampia, le ultime 12, delle sole aperture
+di frase. La finestra qui è più ampia perché le prime due parole di una frase
+sono un'informazione più povera di una frase intera, e richiedono quindi
+uno storico più esteso per intercettare ripetizioni. Le due informazioni
+sono tenute in due dizionari distinti, invece che in un'unica struttura
+combinata, proprio perché servono controlli diversi con finestre di
+lunghezza diversa: tenerle separate evita di dover troncare artificialmente
+l'una alla lunghezza dell'altra.
+
+\subsection{Statistiche di qualità e resilienza}
+\label{sec:impl-stats}
+
+Ogni run accumula un insieme di contatori che permettono, a posteriori, di
+distinguere una variante uscita pulita da una uscita con un fallback, da una
+richiesta di variante che non ha prodotto nulla.
+
+\begin{lstlisting}[language=Python, caption={Calcolo della resa complessiva di un run, a partire dagli slot totali e da quelli completamente falliti.}, label={lst:qa-stats}]
+def to_dict(self):
+    slots_failed = len(self.failed_slots)
+    yield_rate = (1 - (slots_failed / self.total_slots)) if self.total_slots else None
+    return {
+        "total_slots": self.total_slots,
+        "slots_failed": slots_failed,
+        "yield_rate": yield_rate,
+        "fallback_count": self.fallback_count,
+        "style_attempts": dict(self.style_attempts),
+        "style_accepted": dict(self.style_accepted),
+        "failed_slots": self.failed_slots,
+    }
+\end{lstlisting}
+
+\texttt{fallback\_count} conta le varianti uscite comunque, ma con almeno un
+chunk non riformulato; \texttt{failed\_slots} registra invece le richieste di
+variante per cui, dopo aver esaurito i tentativi esterni di rigenerazione
+completa (non solo i tentativi per singolo chunk), non si è prodotto nulla;
+per ciascuna, viene conservato anche il dettaglio di ogni tentativo fallito e
+il relativo motivo. Le statistiche vengono salvate su disco dopo ogni record
+processato, non solo a fine run: un'esecuzione interrotta e ripresa continua
+ad accumulare sugli stessi contatori invece di ripartire da zero. Allo stesso
+scopo di resilienza, l'elenco dei \texttt{source\_id} già presenti nel file di
+output viene ricostruito a ogni avvio, così che i record già completati
+vengano saltati in caso di ripresa dopo un'interruzione (\emph{RNF2}).
+
+\subsection{La modalità senza mascheramento}
+\label{sec:impl-nomask}
+
+Il sistema conserva, per ciascun record, anche un percorso di generazione
+alternativo che riproduce il comportamento pre-mascheramento: il testo intero
+viene sottoposto al modello con i valori veri elencati esplicitamente, senza
+alcuna suddivisione in chunk (\cref{lst:nomask}).
+
+\begin{lstlisting}[language=Python, caption={La modalità senza mascheramento, mantenuta come termine di paragone esplicito e non come percorso di produzione alternativo.}, label={lst:nomask}]
+def generate_variant_no_mask(model, text, values, style_tag, style_desc,
+                              max_attempts, base_temp, max_temp,
+                              avoid_history, slot_label,
+                              avoid_text=None, avoid_reason=None, language="English", hints=None):
+    # Deliberately no chunking here: this mode exists to reproduce the
+    # pre-masking, single-shot behavior for direct comparison, not to be a
+    # second production path.
+    hints = hints or {}
+    identity_mapping = {v: v for v in values}
+    value_list = ", ".join(f'"{v}"' for v in values)
+    ...
+    reason = validation_reason_with_hints(candidate, values, hints, [])
+\end{lstlisting}
+
+Il commento nel codice sorgente è esplicito sul ruolo di questa modalità: non
+un secondo percorso di produzione, ma un termine di paragone diretto per
+quantificare in valutazione il beneficio del mascheramento
+(\cref{chap:evaluation}). L'evidenza raccolta in un run diagnostico su questa
+modalità conferma empiricamente la scelta progettuale discussa in
+\cref{chap:progettazione}: su 41 rifiuti registrati nel log di un run
+limitato a due record, 36 (87,8\%) erano dovuti a valori letterali persi o
+alterati dal modello: un esito reso strutturalmente impossibile dal
+mascheramento, dato che in quella modalità il modello non ha mai accesso al
+valore reale durante la riformulazione.
 
 \chapter{Valutazione}
 \label{chap:evaluation}
@@ -544,8 +1566,8 @@ valutazione.
 \backmatter
 
 
-%\bibliographystyle{alpha}
-%\bibliography{bibliography}
+\bibliographystyle{alpha}
+\bibliography{bibliography}
 
 \begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non
     la vuoi

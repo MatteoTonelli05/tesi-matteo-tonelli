@@ -5,9 +5,9 @@
 % LISTING CONFIGURATIONS
 %-----------------------------------------------------
 
-\crefname{lstlisting}{listing}{listing}	
-\Crefname{lstlisting}{Listing}{Listing}
-\renewcommand\lstlistlistingname{List of Listings}
+\crefname{lstlisting}{listato}{listati}
+\Crefname{lstlisting}{Listato}{Listati}
+\renewcommand\lstlistlistingname{Elenco dei listati}
 
 \lstset{
 	showstringspaces=false,
@@ -26,6 +26,13 @@
 	extendedchars=true,
 	frame=trBL,
 	frameround=fttt,
+	% Senza questa tabella, un carattere accentato UTF-8 (es. "proprietà")
+	% dentro un commento o una stringa in un blocco lstlisting causa un
+	% errore di compilazione ("Invalid UTF-8 byte"), anche se lo stesso
+	% carattere funziona perfettamente nel testo normale del documento.
+	literate=
+		{à}{{\`a}}1 {è}{{\`e}}1 {é}{{\'e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ù}{{\`u}}1
+		{À}{{\`A}}1 {È}{{\`E}}1 {É}{{\'E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ù}{{\`U}}1
 }
 
 \lstdefinelanguage{Kotlin}{
