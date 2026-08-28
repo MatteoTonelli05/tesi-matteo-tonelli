@@ -624,7 +624,7 @@ l'esecuzione è configurata come interrompibile, tramite
 \texttt{config["abortable"]}, e quando il contesto consente di interagire con
 l'interfaccia. In questo modo la stessa implementazione può essere utilizzata
 anche nei contesti che non espongono un controllo di interruzione, come le
-esecuzioni da riga di comando o il pannello dei tier.
+esecuzioni da riga di comando o un pannello di generazione batch.
 
 Le costanti di classe di \texttt{BulkDatasetGenerator}, riportate nel
 \cref{lst:mixin}, definiscono alcuni parametri di funzionamento condivisi
@@ -662,9 +662,9 @@ l'altro.
 Prima di generare qualunque record, il sistema costruisce un'unica mappa
 completa delle proprietà e delle relazioni disponibili per ciascuna entità
 dello schema, interrogando l'API interna della piattaforma CVL. Questa mappa
-viene costruita una sola volta e riutilizzata per tutti i tier, evitando di
-ripetere le stesse chiamate di rete per entità che compaiono in più
-raggruppamenti tematici. Il dettaglio implementativo di come l'API venga
+viene costruita una sola volta e riutilizzata per l'intera esecuzione,
+evitando di ripetere le stesse chiamate di rete ogni volta che un'entità
+già scoperta viene esplorata di nuovo. Il dettaglio implementativo di come l'API venga
 interrogata non è discusso in questa sede, trattandosi di un'interfaccia
 della piattaforma CVL e non di un contributo originale di questa tesi;
 qui rileva solo il risultato che il generatore ne ricava, riportato in forma
@@ -706,7 +706,7 @@ destinazione (\texttt{target}).
 La scelta di indicizzare entrambe le sezioni per nome di entità, invece di
 usare una singola lista di record, non è casuale. La mappa viene infatti
 interrogata ripetutamente durante la scoperta delle route
-(\cref{sec:impl-routes}), una volta per ciascuna coppia entità-tier
+(\cref{sec:impl-routes}), una volta per ciascuna entità di volta in volta
 esplorata, e un dizionario permette di recuperare le proprietà o le
 relazioni di una data entità in tempo costante, invece di dover scorrere
 l'intera struttura ogni volta.
@@ -721,7 +721,7 @@ un'entità dipendano solo dal suo tipo, non dal percorso concreto con cui la
 si raggiunge, a differenza dell'API di CVL, che può restituire relazioni
 diverse a seconda della storia di selezione accumulata fino a quel punto. Questo costo
 viene accettato deliberatamente, perché l'alternativa, interrogare l'API da
-capo per ogni singola entità di ogni singolo tier che la usa, è proprio il
+capo ogni volta che una qualunque entità viene esplorata, è proprio il
 collo di bottiglia che si vuole evitare.
 
 Per ridurre il tempo complessivo di questa fase, le interrogazioni relative
@@ -735,9 +735,9 @@ potenzialmente enorme quando un campo ammette moltissimi valori distinti.
 \subsection{Costruzione delle route}
 \label{sec:impl-routes}
 
-Con la mappa disponibile, per ciascuna entità radice di un tier, si esplora
+Con la mappa disponibile, per ciascuna entità radice richiesta, si esplora
 tramite una visita in profondità (DFS) ogni combinazione raggiungibile di salti
-relazionali fino al limite imposto dal tier stesso.
+relazionali fino a un limite di profondità configurato.
 
 \begin{lstlisting}[language=Python, caption={Visita in profondità della mappa del grafo per la costruzione delle route disponibili a partire da un'entità radice.}, label={lst:dfs}]
 def dfs(type_value, chain, relations_used, visited, ancestor_terminals):
@@ -793,7 +793,7 @@ casualmente al suo interno.
 
 Prima di generare i record, il sistema calcola quante coppie prompt-query
 distinte siano effettivamente raggiungibili con le route disponibili e i
-vincoli del tier, in modo da non richiedere più record di quanti lo spazio
+vincoli configurati, in modo da non richiedere più record di quanti lo spazio
 combinatorio possa realmente offrire; solo dopo, campiona a caso tra le
 combinazioni così stimate per costruire ogni singolo record.
 
@@ -808,7 +808,7 @@ limiti $\mathit{min\_values}$/$\mathit{max\_values}$ imposti alla generazione;
 \\Sia $\mathcal{C}_k(T_r)$ l'insieme di tutte le scelte di $k$ terminal tra
 quelli di $T_r$ che includono almeno un terminal di $T_r^f$. \\Con
 $\mathit{p_{\min}}$ e $\mathit{p_{\max}}$ i limiti
-$\mathit{min\_properties}$/$\mathit{max\_properties}$ del tier, il peso
+$\mathit{min\_properties}$/$\mathit{max\_properties}$ configurati, il peso
 combinatorio di $r$ è
 
 \begin{equation}
@@ -829,7 +829,7 @@ scegliendo insieme tutti i terminal di $c$, perché il valore di un terminal si
 sceglie indipendentemente da quello degli altri; la somma su
 $c \in \mathcal{C}_k(T_r)$ totalizza questo conteggio su ogni scelta possibile
 di $k$ terminal; la somma su $k$ ripete il tutto per ogni dimensione di scelta
-ammessa dal tier.
+ammessa.
 
 Il caso $w(r) = 0$ è lo stesso principio
 portato all'estremo, ed esclude le route il cui nodo finale non possiede
@@ -840,8 +840,8 @@ Un record, però, spesso combina più route insieme, non una sola. Sia $V$
 l'insieme delle route con peso non nullo, e sia $\mathrm{indip}(S)$ vera
 quando nessuna coppia di route nell'insieme $S$ ha una chain prefisso
 dell'altra (\cref{sec:impl-routes}). Con $\mathit{s_{\min}}$ e
-$\mathit{s_{\max}}$ i limiti $\mathit{min\_paths}$/$\mathit{max\_paths}$ del
-tier, il tetto teorico complessivo dell'entità è
+$\mathit{s_{\max}}$ i limiti $\mathit{min\_paths}$/$\mathit{max\_paths}$
+configurati, il tetto teorico complessivo dell'entità è
 
 \begin{equation}
     \label{eq:ceiling}
@@ -855,7 +855,7 @@ $\prod_{r \in S} w(r)$ combina i pesi delle route in un insieme specifico
 $S$, perché scegliere i dettagli di una route è una decisione indipendente
 da quella di un'altra route nello stesso record; la somma su $S$ totalizza
 questo conteggio su ogni insieme indipendente di $s$ route; la somma su $s$
-ripete il tutto per ogni numero di route ammesso dal tier. La condizione
+ripete il tutto per ogni numero di route ammesso. La condizione
 $\mathrm{indip}(S)$ svolge qui il ruolo che il vincolo su $T_r^f$ svolge
 nell'equazione precedente: due route di cui una è prefisso dell'altra
 descrivono in parte lo stesso cammino, e combinarle nello stesso record
@@ -892,7 +892,7 @@ def sample_independent_combo(target_p):
 \end{lstlisting}
 
 Per ogni record da generare, il numero di route da combinare viene scelto a
-caso entro i limiti del tier, poi le route vengono estratte da un elenco
+caso entro i limiti configurati, poi le route vengono estratte da un elenco
 mescolato in ordine casuale, scartando quelle che risultano \emph{in
     conflitto} con una già scelta, cioè la cui chain è un prefisso di un'altra
 già selezionata, il che indicherebbe due vincoli ridondanti sullo stesso
@@ -1023,7 +1023,7 @@ def fill_node(node, term, pool, min_values, max_values):
 \end{lstlisting}
 
 Il numero di valori da usare per un dato vincolo è scelto a caso entro i
-limiti del tier (\cref{lst:fill-node}), con una regola esplicita: non si
+limiti configurati (\cref{lst:fill-node}), con una regola esplicita: non si
 seleziona mai l'intero dominio possibile di un campo, perché un vincolo che
 copre tutti i valori ammessi non esclude di fatto nessun paziente e risulta
 quindi privo di potere selettivo. Se il campo è una data o un valore
@@ -1566,8 +1566,14 @@ valore reale durante la riformulazione.
 \backmatter
 
 
-\bibliographystyle{alpha}
-\bibliography{bibliography}
+% Commentata temporaneamente: nessun \cite{} nel documento al momento
+% (il capitolo Background, che avrebbe dovuto citare cvl2025pipeline e
+% cvl2025platform, è ancora uno stub). Con nessuna citazione, bibtex fallisce
+% con "I found no \citation commands", innocuo in locale con latexmk, ma
+% fatale nella pipeline CI (rubber). Da riattivare quando il Background sarà
+% scritto e le fonti richiamate con \cite{}.
+% \bibliographystyle{alpha}
+% \bibliography{bibliography}
 
 \begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non
     la vuoi
