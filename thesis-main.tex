@@ -799,17 +799,14 @@ combinazioni così stimate per costruire ogni singolo record.
 
 \subsubsection{Stima combinatoria}
 
-Sia $r$ una route, chiamiamo $T_r$ l'insieme dei terminal raggiungibili lungo
-$r$, compresi quelli dei nodi intermedi, e $T_r^f \subseteq T_r$ il
-sottoinsieme dei terminal finali, cioè quelli che appartengono davvero al nodo
-dove la route si ferma. \\Sia $v(t)$ il numero di combinazioni di valori che il
-singolo terminal $t$ ammette da solo, determinato dal suo tipo di dato e dai
-limiti $\mathit{min\_values}$/$\mathit{max\_values}$ imposti alla generazione;
-\\Sia $\mathcal{C}_k(T_r)$ l'insieme di tutte le scelte di $k$ terminal tra
-quelli di $T_r$ che includono almeno un terminal di $T_r^f$. \\Con
-$\mathit{p_{\min}}$ e $\mathit{p_{\max}}$ i limiti
+Sia $r$ una route, $T_r$ l'insieme dei suoi terminal e $T_r^f \subseteq T_r$
+i terminal finali (quelli del nodo dove la route si ferma davvero). Sia
+$v(t)$ il numero di combinazioni di valori di un terminal, e
+$\mathcal{C}_k(T_r)$ le combinazioni di $k$ terminal di $T_r$ (nel senso
+standard, $\binom{|T_r|}{k}$ possibilità) che includono almeno un terminal
+di $T_r^f$. Con $\mathit{p_{\min}}$, $\mathit{p_{\max}}$ i limiti
 $\mathit{min\_properties}$/$\mathit{max\_properties}$ configurati, il peso
-combinatorio di $r$ è
+di $r$ è
 
 \begin{equation}
     \label{eq:route-weight}
@@ -822,26 +819,12 @@ combinatorio di $r$ è
     \end{cases}
 \end{equation}
 
-La formula conta le selezioni di proprietà che il generatore può costruire su
-quella route. Fissata una taglia $k$, per ogni scelta $c$ di $k$ terminal il
-prodotto $\prod_{t \in c} v(t)$ conta le combinazioni di valori disponibili
-scegliendo insieme tutti i terminal di $c$, perché il valore di un terminal si
-sceglie indipendentemente da quello degli altri; la somma su
-$c \in \mathcal{C}_k(T_r)$ totalizza questo conteggio su ogni scelta possibile
-di $k$ terminal; la somma su $k$ ripete il tutto per ogni dimensione di scelta
-ammessa.
-
-Il caso $w(r) = 0$ è lo stesso principio
-portato all'estremo, ed esclude le route il cui nodo finale non possiede
-terminal propri, coerentemente con quanto già discusso in
-\cref{sec:impl-routes}.
-
-Un record, però, spesso combina più route insieme, non una sola. Sia $V$
-l'insieme delle route con peso non nullo, e sia $\mathrm{indip}(S)$ vera
-quando nessuna coppia di route nell'insieme $S$ ha una chain prefisso
-dell'altra (\cref{sec:impl-routes}). Con $\mathit{s_{\min}}$ e
-$\mathit{s_{\max}}$ i limiti $\mathit{min\_paths}$/$\mathit{max\_paths}$
-configurati, il tetto teorico complessivo dell'entità è
+Un record spesso combina più route insieme. Sia $V$ l'insieme delle route
+con peso non nullo, e $\mathrm{indip}(S)$ vera quando nessuna coppia di
+route in $S$ ha una chain prefisso dell'altra (\cref{sec:impl-routes}). Con
+$\mathit{s_{\min}}$, $\mathit{s_{\max}}$ i limiti
+$\mathit{min\_paths}$/$\mathit{max\_paths}$ configurati, il tetto teorico
+dell'entità è
 
 \begin{equation}
     \label{eq:ceiling}
@@ -850,31 +833,26 @@ configurati, il tetto teorico complessivo dell'entità è
     \;\prod_{r \,\in\, S} w(r).
 \end{equation}
 
-Stessa lettura di \cref{eq:route-weight}, un livello più in su: il prodotto
-$\prod_{r \in S} w(r)$ combina i pesi delle route in un insieme specifico
-$S$, perché scegliere i dettagli di una route è una decisione indipendente
-da quella di un'altra route nello stesso record; la somma su $S$ totalizza
-questo conteggio su ogni insieme indipendente di $s$ route; la somma su $s$
-ripete il tutto per ogni numero di route ammesso. La condizione
-$\mathrm{indip}(S)$ svolge qui il ruolo che il vincolo su $T_r^f$ svolge
-nell'equazione precedente: due route di cui una è prefisso dell'altra
-descrivono in parte lo stesso cammino, e combinarle nello stesso record
-produrrebbe duplicati.
-
-Va precisato che \cref{eq:ceiling} fornisce una sovrastima, non un conteggio
-esatto. Poiché $T_r$ comprende anche i terminal dei nodi intermedi, due route
-indipendenti che condividono un prefisso condividono anche quei terminal: il
-prodotto dei pesi le tratta come scelte separate, e uno stesso record può
-quindi essere contato più di una volta. Per l'uso che se ne fa, cioè
-riconoscere quando lo spazio delle combinazioni è troppo piccolo rispetto al
-numero di record richiesti, un limite superiore è sufficiente.
-
-Per evitare di eseguire un calcolo combinatorio troppo costoso quando lo
-spazio è già enorme, il conteggio esatto viene abbandonato non appena il
-numero di combinazioni da esaminare supera una soglia fissa (500\,000); in
-quel caso il campionamento procede senza un tetto teorico noto in anticipo.
+$N$ è una sovrastima, non un conteggio esatto: route indipendenti che
+condividono un prefisso condividono anche parte dei terminal, e il prodotto
+dei pesi le tratta come scelte separate. Per l'uso che se ne fa, cioè
+riconoscere quando lo spazio delle combinazioni è troppo piccolo rispetto ai
+record richiesti, un limite superiore basta. Oltre una soglia di 500\,000
+combinazioni da esaminare, il conteggio esatto viene abbandonato e il
+campionamento procede senza un tetto noto in anticipo.
 
 \subsubsection{Campionamento}
+
+Per ogni record da generare, il numero di route da combinare viene scelto a
+caso entro i limiti configurati. Le route disponibili vengono poi estratte
+da un elenco mescolato in ordine casuale, scartando quelle che risultano
+\emph{in conflitto} con una già scelta, cioè la cui chain è un prefisso di
+un'altra già selezionata, il che indicherebbe due vincoli ridondanti sullo
+stesso tratto di percorso. Il campionamento continua finché non si raggiunge
+il numero di record stimato dal tetto teorico (\cref{eq:ceiling}), oppure
+finché 250 tentativi consecutivi (\texttt{SAMPLING\_GIVEUP\_STREAK}) non
+producono nulla di nuovo, segno che lo spazio raggiungibile è stato
+esaurito.
 
 \begin{lstlisting}[language=Python, caption={Campionamento casuale di un insieme di route indipendenti tra loro per un singolo record.}, label={lst:sample-combo}]
 def sample_independent_combo(target_p):
@@ -891,27 +869,19 @@ def sample_independent_combo(target_p):
     return tuple(chosen)
 \end{lstlisting}
 
-Per ogni record da generare, il numero di route da combinare viene scelto a
-caso entro i limiti configurati, poi le route vengono estratte da un elenco
-mescolato in ordine casuale, scartando quelle che risultano \emph{in
-    conflitto} con una già scelta, cioè la cui chain è un prefisso di un'altra
-già selezionata, il che indicherebbe due vincoli ridondanti sullo stesso
-tratto di percorso (\cref{lst:sample-combo}). Il campionamento continua finché
-non si raggiunge il numero di record stimato dal tetto teorico
-(\cref{eq:ceiling}), oppure finché
-250 tentativi consecutivi (\texttt{SAMPLING\_GIVEUP\_STREAK}) non producono
-nulla di nuovo, segno che lo spazio raggiungibile è stato esaurito.
-
 Questa modalità di campionamento casuale (\texttt{\_run\_sampled}) non è
 l'unica prevista dal codice: esiste anche una modalità a forza bruta
 (\texttt{\_run\_brute\_force}) che enumera esaustivamente ogni combinazione
-possibile di route e proprietà, senza campionamento casuale, per i casi in cui
-si desideri una copertura completa dello spazio combinatorio invece di un
-sottoinsieme. Poiché ogni tier, in entrambe le configurazioni descritte in
-\cref{sec:impl-tiers}, specifica sempre un \texttt{sample\_size\_per\_entity},
-la modalità a forza bruta non è mai stata usata nei run di produzione: la
-selezione tra le due modalità avviene automaticamente in base alla presenza o
-assenza di questo parametro.
+possibile di route e proprietà, senza ricorrere al campionamento casuale.
+Quest'ultima modalità risulta utile quando l'obiettivo è ottenere una
+copertura completa dello spazio combinatorio; non è stata utilizzata nei
+run di produzione, ma è stata comunque impiegata in fase di sviluppo per
+individuare eventuali bug, proprio grazie alla sua capacità di esplorare lo
+spazio delle combinazioni senza lasciarne fuori nessuna. Il dataset
+generato è infatti destinato al fine-tuning, per il quale non è necessario
+enumerare tutte le combinazioni possibili, ma è preferibile costruire un
+insieme sufficientemente ampio e vario di esempi rappresentativi, evitando
+al contempo di produrre una quantità di dati eccessiva rispetto allo scopo.
 
 \subsection{Esecuzione sequenziale e parallela}
 \label{sec:impl-execution}
