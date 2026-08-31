@@ -795,7 +795,10 @@ Prima di generare i record, il sistema calcola quante coppie prompt-query
 distinte siano effettivamente raggiungibili con le route disponibili e i
 vincoli configurati, in modo da non richiedere più record di quanti lo spazio
 combinatorio possa realmente offrire; solo dopo, campiona a caso tra le
-combinazioni così stimate per costruire ogni singolo record.
+combinazioni così stimate per costruire ogni singolo record. I due passi
+sono di natura diversa: la stima è un conteggio puramente matematico,
+espresso di seguito con delle formule; il campionamento è invece un
+algoritmo vero e proprio, mostrato più avanti in codice.
 
 \subsubsection{Stima combinatoria}
 
@@ -833,13 +836,15 @@ dell'entità è
     \;\prod_{r \,\in\, S} w(r).
 \end{equation}
 
-$N$ è una sovrastima, non un conteggio esatto: route indipendenti che
-condividono un prefisso condividono anche parte dei terminal, e il prodotto
-dei pesi le tratta come scelte separate. Per l'uso che se ne fa, cioè
-riconoscere quando lo spazio delle combinazioni è troppo piccolo rispetto ai
-record richiesti, un limite superiore basta. Oltre una soglia di 500\,000
-combinazioni da esaminare, il conteggio esatto viene abbandonato e il
-campionamento procede senza un tetto noto in anticipo.
+È da sottolineare che $N$ è di fatto una sovrastima, in quanto route
+indipendenti che condividono un prefisso condividono anche parte dei terminal,
+mentre il prodotto dei pesi utilizzato nella nostra formula le tratta come
+scelte separate. Per l'uso che se ne fa, cioè riconoscere quando lo spazio delle
+combinazioni è troppo piccolo rispetto ai record richiesti, un limite superiore
+basta, perciò possiamo evitare di complicare ulteriormente il calcolo. Proprio
+per evitare un'ulteriore inefficienza, l'algoritmo imposta una soglia di
+500\,000 combinazioni da esaminare, dopo la quale il conteggio esatto viene
+abbandonato e il campionamento procede senza un tetto noto in anticipo.
 
 \subsubsection{Campionamento}
 
@@ -869,27 +874,29 @@ def sample_independent_combo(target_p):
     return tuple(chosen)
 \end{lstlisting}
 
-Questa modalità di campionamento casuale (\texttt{\_run\_sampled}) non è
-l'unica prevista dal codice: esiste anche una modalità a forza bruta
+Questa modalità di campionamento casuale (\texttt{\_run\_sampled}) non è l'unica
+prevista dal codice, esiste infatti anche una modalità a forza bruta
 (\texttt{\_run\_brute\_force}) che enumera esaustivamente ogni combinazione
-possibile di route e proprietà, senza ricorrere al campionamento casuale.
-Quest'ultima modalità risulta utile quando l'obiettivo è ottenere una
-copertura completa dello spazio combinatorio; non è stata utilizzata nei
-run di produzione, ma è stata comunque impiegata in fase di sviluppo per
-individuare eventuali bug, proprio grazie alla sua capacità di esplorare lo
-spazio delle combinazioni senza lasciarne fuori nessuna. Il dataset
-generato è infatti destinato al fine-tuning, per il quale non è necessario
-enumerare tutte le combinazioni possibili, ma è preferibile costruire un
-insieme sufficientemente ampio e vario di esempi rappresentativi, evitando
-al contempo di produrre una quantità di dati eccessiva rispetto allo scopo.
+possibile di route e proprietà. Quest'ultima modalità risulta utile quando
+l'obiettivo è ottenere una copertura completa dello spazio combinatorio; tuttavia
+non è stata utilizzata nei run di produzione, ma è stata comunque impiegata in
+fase di sviluppo per individuare eventuali errori di generazione, proprio grazie
+alla sua capacità di esplorare lo spazio delle combinazioni senza lasciarne
+fuori nessuna. Nella casistica affrontata da questa tesi però il dataset
+generato è destinato al fine-tuning, per il quale non è necessario
+enumerare tutte le combinazioni possibili, anzi è preferibile costruire un insieme
+sufficientemente ampio e vario di esempi rappresentativi, evitando al contempo
+di produrre una quantità di dati eccessiva rispetto allo scopo.
 
 \subsection{Esecuzione sequenziale e parallela}
 \label{sec:impl-execution}
 
-Una volta pianificata una combinazione da trasformare in record, la sua
-esecuzione effettiva, che comporta le chiamate di rete verso l'API del CVL,
-può avvenire in sequenza o in parallelo su più thread, a seconda della
-configurazione.
+Una volta pianificata una combinazione di route e proprietà da trasformare in un
+record, ha inizio l'intero processo di costruzione del record vero e proprio,
+il quale comporta diverse chiamate di rete verso l'API del CVL. Questo processo può
+essere eseguito in sequenza, una combinazione alla volta, oppure in parallelo su
+più thread, ciascuno impegnato a costruire un record diverso in contemporanea
+agli altri, a seconda della configurazione.
 
 \begin{lstlisting}[language=Python, caption={Scelta tra esecuzione sequenziale e parallela in base al numero di worker configurati.}, label={lst:workers}]
 workers = max(1, int(self.config.get("num_workers") or self.GENERATION_WORKERS))
@@ -898,25 +905,44 @@ if workers <= 1:
     return
 \end{lstlisting}
 
-Se il numero di worker configurato è maggiore di uno, le combinazioni
-campionate vengono distribuite su un pool di thread (fino a
-\texttt{GENERATION\_WORKERS}, 4 di default), mantenendo una finestra di lavori
-sottomessi contemporaneamente per non lasciare i worker inattivi tra un
-risultato e il successivo. Nei run di produzione, tuttavia, il numero di
-worker è stato impostato esplicitamente a 1 (\cref{lst:common-config}),
-disattivando di fatto il parallelismo in questa fase: ogni record è stato
-generato in sequenza, uno alla volta.
+Se il numero di worker configurato è maggiore di uno, le combinazioni campionate
+vengono sottomesse a un pool di thread, fino a \texttt{GENERATION\_WORKERS}
+worker attivi contemporaneamente (di default 4), ciascuno impegnato nella
+costruzione di un record indipendente. Il sistema non sottomette tuttavia tutte
+le combinazioni disponibili in un'unica operazione, poiché ciò potrebbe
+determinare l'accumulo in coda di un numero molto elevato di job in attesa.
+Viene invece mantenuta una finestra di lavori sottomessi ma non ancora
+completati, di dimensione pari al doppio del numero di worker attivi; quando la
+generazione di un record termina e il risultato viene salvato, il relativo
+spazio viene immediatamente riutilizzato per sottomettere una nuova
+combinazione.
 
-Quando invece il parallelismo è attivo, sia in questa fase sia nella
-scoperta della mappa (\cref{sec:impl-discovery}), lo stato condiviso tra i
-thread non è protetto da un unico lock globale, ma da quattro lock
-distinti, ciascuno a guardia di una porzione di stato diversa: uno per gli
-insiemi di deduplicazione, uno per la cache dello scheletro
-(\cref{sec:impl-skeleton}), uno per le statistiche interne sulle chiamate
-effettuate, e uno per il registro dei job attualmente in esecuzione. Questa
-granularità evita che un thread debba attendere l'accesso a una struttura
-dati con cui non ha nulla a che fare, solo perché un altro thread sta, nello
-stesso istante, aggiornandone una completamente diversa.
+Questa strategia consente, in condizioni di parallelismo effettivo, di
+mantenere i worker occupati riducendo i tempi morti, senza introdurre una
+quantità di lavoro in coda eccessiva rispetto alla capacità di elaborazione
+disponibile. Il meccanismo è stato predisposto principalmente in vista di
+future esecuzioni su larga scala, nelle quali il parallelismo potrebbe
+ridurre significativamente il tempo complessivo di generazione.
+
+Durante la produzione del dataset trattato, il numero di worker è stato invece
+impostato esplicitamente a 1 (\cref{lst:common-config}) eseguendo così la
+generazione in modalità single-threaded. La scelta è dettata dal collo di
+bottiglia rappresentato dalle chiamate all'API, le cui richieste concorrenti non
+avrebbero ridotto i tempi in proporzione, anzi avrebbero rischiato di comprometterne
+stabilità e prestazioni. Il parallelismo è rimasto invece attivo nella scoperta
+della mappa (\cref{sec:impl-discovery}), dove il carico delle operazioni si
+presta meglio all'esecuzione concorrente.
+
+Proprio perché il parallelismo può comunque essere attivato lo stato condiviso
+tra i thread non è protetto da un unico lock globale ma da quattro lock
+distinti, ciascuno a guardia di una porzione di stato diversa e indipendente
+dalle altre: un lock protegge gli insiemi usati per riconoscere i duplicati
+(\cref{sec:impl-output}), un altro la cache dello scheletro
+(\cref{sec:impl-skeleton}), un altro ancora le statistiche interne sulle
+chiamate effettuate, e l'ultimo il registro dei job attualmente in esecuzione.
+Tenerli separati, invece di usarne uno solo per tutto, evita che un thread
+resti bloccato in attesa di una struttura dati che non gli serve, solo
+perché un altro thread ne sta aggiornando una diversa nello stesso istante.
 
 \subsection{Costruzione dello scheletro: percorso online e offline}
 \label{sec:impl-skeleton}
