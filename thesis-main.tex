@@ -1043,8 +1043,19 @@ già nota (registrata al momento della scoperta delle route,
 terminal, senza doverli richiedere di nuovo; con lo scheletro pronto, si arriva
 così direttamente all'unico passaggio che nessuno dei due percorsi può evitare,
 ovvero la chiamata finale descritta di seguito.
-\\\\
-Indipendentemente dal percorso scelto per lo scheletro infatti, il testo
+
+\begin{lstlisting}[language=Python, caption={Lo scheletro appena ricostruito per i terminal \texttt{gender} e \texttt{birth date}, ancora privo di valori.}, label={lst:skeleton-example}]
+history = [
+    {
+        "query_nodes": [
+            {"predicate": {"label": "gender"}, "values": None, "value_range": None},
+            {"predicate": {"label": "birth date"}, "values": None, "value_range": None},
+        ]
+    }
+]
+\end{lstlisting}
+
+Indipendentemente dal percorso scelto per lo scheletro, il testo
 effettivo della query SPARQL viene sempre ottenuto con un'unica chiamata finale
 all'API, che traduce la struttura accumulata in una query eseguibile. Questo
 passaggio non è mai eseguito localmente, in nessuna delle due modalità,
@@ -1071,13 +1082,23 @@ def fill_node(node, term, pool, min_values, max_values):
         node["values"] = chosen
 \end{lstlisting}
 
-Il numero di valori da usare per un dato vincolo è scelto a caso entro i
-limiti configurati (\cref{lst:fill-node}), con una regola esplicita: non si
-seleziona mai l'intero dominio possibile di un campo, perché un vincolo che
-copre tutti i valori ammessi non esclude di fatto nessun paziente e risulta
-quindi privo di potere selettivo. Se il campo è una data o un valore
-numerico, i valori scelti vengono usati per costruire un intervallo anziché
-un elenco discreto.
+Il numero di valori da usare per un dato vincolo è scelto a caso entro i limiti
+configurati (\cref{lst:fill-node}), evitando però di selezionare l'intero
+dominio possibile di un campo, perché un vincolo che copre tutti i valori
+ammessi non escluderebbe di fatto nessun paziente, risultando così privo
+di potere selettivo. Se il campo è una data o un valore numerico, i valori
+scelti vengono usati per costruire un intervallo anziché un elenco discreto.
+
+\begin{lstlisting}[language=Python, caption={Lo stesso scheletro di \cref{lst:skeleton-example}, dopo il riempimento: elenco discreto per il campo categoriale, intervallo per quello di tipo data.}, label={lst:filled-nodes}]
+history = [
+    {
+        "query_nodes": [
+            {"predicate": {"label": "gender"}, "values": [{"value": "F", "label": "Female"}], "value_range": None},
+            {"predicate": {"label": "birth date"}, "values": None, "value_range": {"min": "2016-01-01", "max": "2019-01-01"}},
+        ]
+    }
+]
+\end{lstlisting}
 
 \subsection{Generazione del prompt e tracciamento degli span}
 \label{sec:impl-phrasing}
