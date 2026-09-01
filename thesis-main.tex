@@ -955,6 +955,7 @@ opzioni di comportamento, tutte raccolte in un'unica configurazione condivisa
 da entrambe le liste di tier.
 
 \subsubsection{Le opzioni condivise}
+\label{sec:impl-config}
 
 \begin{lstlisting}[language=Python, caption={Configurazione condivisa usata nei run di produzione, per entrambe le liste di tier.}, label={lst:common-config}]
 COMMON_CONFIG = {
@@ -962,7 +963,7 @@ COMMON_CONFIG = {
     "offline_history": True,
     "include_value_spans": True,
     "skip_navigation_in_prompt": False,
-    "validate_sparql": False,
+    "validate_sparql": True,
 }
 \end{lstlisting}
 
@@ -971,7 +972,7 @@ comportamento del generatore.
 
 \begin{itemize}
     \item \texttt{num\_workers} a 1 è la scelta, già motivata in \cref{sec:impl-execution}, di eseguire la generazione in sequenza anziché in parallelo.
-    \item \texttt{include\_value\_spans} controlla se il generatore debba tracciare le posizioni dei valori letterali nel prompt (\cref{sec:impl-phrasing}).
+    \item \texttt{include\_value\_spans} controlla se il generatore debba tracciare le posizioni dei valori letterali nel prompt (\cref{sec:impl-phrasing}, dove è ripreso in dettaglio).
     \item \texttt{skip\_navigation\_in\_prompt}, se attivato ometterebbe dal
           testo del prompt le clausole di sola navigazione, rendendolo più corto
           ma meno esplicito sul percorso nel grafo; è stato tenuto disattivato
@@ -1103,15 +1104,23 @@ history = [
 \subsection{Generazione del prompt e tracciamento degli span}
 \label{sec:impl-phrasing}
 
-Con lo scheletro completo di valori, il testo del prompt viene costruito
-segmento per segmento, tenendo traccia della posizione esatta di ogni valore
-letterale mentre il testo viene assemblato, non cercandola a posteriori. Se
-la posizione venisse invece ricavata cercando il valore nel testo finale già
-completo, un valore che comparisse per coincidenza anche altrove nella
-frase, ad esempio una data o un numero che si ripete in un punto non
-correlato, renderebbe ambigua la ricerca: tracciare la posizione nel momento
-esatto in cui il segmento viene scritto elimina questa ambiguità alla
-radice, perché non serve mai indovinare quale occorrenza sia quella giusta.
+Definiamo un segmento come un pezzo di testo accompagnato da un booleano che
+indica se il testo contenga un valore letterale, come una data o un codice,
+oppure solo una parola di struttura della frase come \emph{with} o \emph{and}.
+Con lo scheletro completo di valori, il prompt viene costruito riassemblando i
+suoi nodi in una lista di segmenti, concatenati uno via l'altro formando il
+prompt finale. La formulazione di ciascun segmento dipende da cosa contiene il
+nodo di origine:
+
+\begin{itemize}
+    \item se il nodo ha valori scelti (\cref{sec:impl-values}), il segmento inizia con \emph{with} seguito dai valori stessi, uniti da \emph{or} se sono due, o da una serie di virgole con un \emph{or} finale se sono di più;
+    \item se rappresenta un intervallo, diventa \emph{between X and Y};
+    \item un nodo senza valori propri, che serve solo a passare al nodo successivo della chain senza introdurre un vincolo, produce invece un segmento con \emph{which} al posto di \emph{with}; un nodo \emph{diagnosis} senza valori seguito da un nodo \emph{stage} con valore \emph{II} produce ad esempio \emph{"which diagnosis with stage II"}.
+\end{itemize}
+
+I segmenti di uno stesso passo della chain vengono uniti con un semplice
+\emph{and}, e lo stesso connettivo lega tra loro i passi successivi, a partire
+da un'apertura fissa (\emph{"Find all \textless entità\textgreater"}).
 
 \begin{lstlisting}[language=Python, caption={Costruzione del prompt segmento per segmento, con tracciamento diretto della posizione di ciascun valore letterale.}, label={lst:build-prompt}]
 def build_prompt_with_spans(root_label, history, skip_navigation=False):
@@ -1125,57 +1134,85 @@ def build_prompt_with_spans(root_label, history, skip_navigation=False):
     return "".join(pieces), spans
 \end{lstlisting}
 
-Ogni nodo dello scheletro viene prima tradotto in una lista di segmenti,
-ciascuno marcato come valore letterale o come struttura di frase (parole di
-collegamento come \emph{with}, \emph{and}, \emph{or}). Scorrendo questi
-segmenti nell'ordine in cui verranno scritti, la posizione di inizio di un
-segmento marcato come valore è calcolata sommando le lunghezze di tutti i
-segmenti già accumulati, calcolata \emph{prima} di aggiungerlo al testo
-(\cref{lst:build-prompt}). Il risultato di questa funzione è esattamente la
-coppia \texttt{(prompt, value\_spans)} salvata per ogni record, e le stesse
-coordinate sono quelle su cui opera il mascheramento nello stadio successivo
-di augmentation, descritto nella sezione seguente.
+Mentre i segmenti vengono concatenati uno alla volta, la posizione di ciascun
+valore inserito nel testo viene registrata. Determinare gli intervalli solo a
+partire dal prompt finale sarebbe infatti ambiguo nel caso in cui lo stesso
+valore comparisse, per coincidenza, anche in un'altra posizione della frase.
+Registrare le coordinate durante la costruzione del testo elimina quindi questa
+ambiguità senza richiedere controlli aggiuntivi. La funzione restituisce sempre
+la coppia \texttt{(prompt, value\_spans)} coerente tra loro, qualunque sia il
+testo prodotto; solo più avanti, al momento di salvare il record completo, il
+flag \texttt{include\_value\_spans} (\cref{sec:impl-config}) decide se il campo
+\texttt{value\_spans} venga scritto nell'output finale o scartato, sempre attivo
+nei run di produzione.
+
+Applicata allo scheletro pieno di \cref{lst:filled-nodes}, la procedura
+produce il prompt \emph{"Find all patient with gender Female and birth
+    date between 2016-01-01 and 2019-01-01"}, con \texttt{value\_spans} pari
+a $[(29,35), (59,69), (74,84)]$, che corrispondono rispettivamente a
+\emph{"Female"}, \emph{"2016-01-01"} e \emph{"2019-01-01"}.
 
 \subsection{Controlli di qualità e deduplicazione}
 \label{sec:impl-output}
 
-Prima di essere salvata, ogni coppia prompt-query attraversa tre controlli in
-sequenza.
+Prima di essere salvata, ogni coppia prompt-query attraversa tre controlli
+in sequenza.
 
-\begin{lstlisting}[language=Python, caption={Verifica che i vincoli scelti siano effettivamente presenti nella query SPARQL restituita.}, label={lst:filters-landed}]
+\begin{enumerate}
+    \item Il primo verifica che la query restituita dall'API contenga
+          davvero una clausola \texttt{FILTER} o \texttt{VALUES}, oppure
+          almeno uno dei valori letterali scelti. Questo controllo esiste
+          perché l'API potrebbe, in linea di principio, restituire una
+          query sintatticamente valida ma priva di ogni vincolo reale, per
+          esempio se un valore non venisse tradotto correttamente in un
+          filtro effettivo: una query del genere risulterebbe innocua da
+          eseguire, ma completamente slegata dal prompt che dovrebbe
+          rappresentare, e finirebbe nel dataset come esempio scorretto
+          senza che nulla lo segnali. Se nessuna delle due condizioni è
+          soddisfatta, il record viene scartato con il motivo esplicito
+          \emph{"the backend ignored our filters"}.
+
+          \begin{lstlisting}[language=Python, caption={Il primo controllo: verifica che i vincoli scelti siano effettivamente presenti nella query SPARQL restituita.}, label={lst:filters-landed}]
 def _filters_landed(sparql, chosen_values):
     if "FILTER" in sparql or "VALUES" in sparql:
         return True
     return any(v in sparql for v in chosen_values)
-\end{lstlisting}
+          \end{lstlisting}
 
-Il primo controllo (\cref{lst:filters-landed}) verifica che la query
-restituita dall'API contenga effettivamente una clausola \texttt{FILTER} o
-\texttt{VALUES}, oppure almeno uno dei valori letterali scelti: se nessuna
-delle due condizioni è soddisfatta, il record viene scartato con il motivo
-esplicito \emph{"the backend ignored our filters"}.
+    \item Il secondo verifica la validità sintattica della query tramite
+          un vero parser SPARQL, la libreria
+          \texttt{rdflib}\footnote{\url{https://rdflib.readthedocs.io/}}.
+          Serve a intercettare query malformate prima che finiscano nel
+          dataset: un esempio di addestramento con una query che non si
+          può nemmeno interpretare sarebbe peggio che inutile, perché
+          insegnerebbe al modello una sintassi scorretta. Il controllo è
+          condizionato dal parametro \texttt{validate\_sparql}
+          (\cref{lst:common-config}), impostato a vero nei run di
+          produzione; ogni query che non superava il parsing veniva
+          quindi scartata per davvero, con il motivo esplicito
+          \emph{"the SPARQL does not parse (rdflib)"}.
 
-\begin{lstlisting}[language=Python, caption={Il controllo sintattico tramite \texttt{rdflib} è condizionato dalla configurazione.}, label={lst:validate-sparql}]
+          \begin{lstlisting}[language=Python, caption={Il secondo controllo: il parsing sintattico tramite \texttt{rdflib} è condizionato dal parametro di configurazione.}, label={lst:validate-sparql}]
 syntax_error = (
     validate.sparql_error(sparql)
     if self.config.get("validate_sparql", True) else None
 )
-\end{lstlisting}
+          \end{lstlisting}
 
-Il secondo controllo verificherebbe la validità sintattica della query
-tramite un vero parser SPARQL (la libreria
-\texttt{rdflib}\footnote{\url{https://rdflib.readthedocs.io/}}), ma è
-condizionato dal parametro \texttt{validate\_sparql}
-(\cref{lst:validate-sparql}), che nei run di produzione era impostato a falso
-(\cref{lst:common-config}): nessuna query è quindi mai stata scartata per un
-errore di sintassi, e su questo fronte sono rimasti attivi solo i controlli
-sui filtri atterrati e sui duplicati. Il terzo controllo verifica che la
-coppia non sia un duplicato, né come solo prompt né come combinazione di
-prompt e query insieme; in caso di prompt duplicato, il sistema ritenta con
-nuovi valori scelti a caso fino a 4 volte (\texttt{VALUE\_REROLLS}) prima di
-scartare definitivamente il tentativo. Solo le coppie che superano i
-controlli attivi vengono accumulate in un buffer e scritte su disco a gruppi
-di 50 (\texttt{BUFFER\_SIZE}).
+    \item Il terzo verifica che la coppia non sia un duplicato, né come
+          solo prompt né come combinazione di prompt e query insieme.
+          Senza questo controllo, lo stesso esempio potrebbe comparire più
+          volte nel dataset semplicemente perché il campionamento ha scelto
+          per caso, in record diversi, la stessa combinazione di route e
+          valori, riducendo la varietà effettiva senza che il conteggio
+          totale dei record se ne accorga. In caso di prompt duplicato, il
+          sistema non scarta subito il tentativo: ritenta con nuovi valori
+          scelti a caso fino a 4 volte (\texttt{VALUE\_REROLLS}) prima di
+          arrendersi definitivamente.
+\end{enumerate}
+
+Solo le coppie che superano tutti e tre i controlli vengono accumulate in
+un buffer e scritte su disco a gruppi di 50 (\texttt{BUFFER\_SIZE}).
 
 \subsection{Le due configurazioni di tier}
 \label{sec:impl-tiers}
