@@ -952,7 +952,9 @@ intermedia, chiamata \emph{scheletro}, che rappresenta i nodi del grafo
 coinvolti nella query, prima ancora che i valori concreti vengano scelti. Il
 sistema offre due percorsi alternativi per costruirla, insieme ad altre
 opzioni di comportamento, tutte raccolte in un'unica configurazione condivisa
-da entrambe le liste di tier (\cref{lst:common-config}).
+da entrambe le liste di tier.
+
+\subsubsection{Le opzioni condivise}
 
 \begin{lstlisting}[language=Python, caption={Configurazione condivisa usata nei run di produzione, per entrambe le liste di tier.}, label={lst:common-config}]
 COMMON_CONFIG = {
@@ -964,42 +966,93 @@ COMMON_CONFIG = {
 }
 \end{lstlisting}
 
-Con \texttt{offline\_history} attivo, lo scheletro viene ricostruito
-interamente in locale, senza alcuna chiamata di rete, a partire dai dati già
-raccolti durante la scoperta della mappa (\cref{lst:offline-skeleton}).
+Ciascuna di queste cinque opzioni governa un aspetto distinto del
+comportamento del generatore.
 
-\begin{lstlisting}[language=Python, caption={Ricostruzione locale dello scheletro a partire dai dati già noti dalla mappa del grafo.}, label={lst:offline-skeleton}]
-def build_skeleton(root_type, terminal_groups):
-    for index, terminals in enumerate(terminal_groups):
-        nodes = []
-        for term in terminals:
-            nodes.append(_empty_node(root_type))
-            for hop in term.get("chain_prefix", []):
-                nodes[-1]["predicate"] = hop["predicate"]
-                nodes[-1]["reference_to"] = hop.get("reference_to")
-                nodes.append(_empty_node(hop.get("reference_to")))
-            nodes[-1]["predicate"] = term["predicate"]
-            nodes[-1]["reference_to"] = term.get("reference_to")
-            nodes[-1]["datatype"] = term.get("datatype")
-            slots.append((index, len(nodes) - 1, term, list(term.get("values") or [])))
-\end{lstlisting}
+\begin{itemize}
+    \item \texttt{num\_workers} a 1 è la scelta, già motivata in \cref{sec:impl-execution}, di eseguire la generazione in sequenza anziché in parallelo.
+    \item \texttt{include\_value\_spans} controlla se il generatore debba tracciare le posizioni dei valori letterali nel prompt (\cref{sec:impl-phrasing}).
+    \item \texttt{skip\_navigation\_in\_prompt}, se attivato ometterebbe dal
+          testo del prompt le clausole di sola navigazione, rendendolo più corto
+          ma meno esplicito sul percorso nel grafo; è stato tenuto disattivato
+          in produzione per non perdere quell'informazione.
+    \item \texttt{validate\_sparql} controlla se la query SPARQL restituita
+          dall'API debba passare un controllo di sintassi prima di essere
+          accettata; sarà ripreso più avanti insieme agli altri controlli di
+          qualità (\cref{sec:impl-output}).
+    \item \texttt{offline\_history} decide se lo scheletro venga ricostruito
+          in locale oppure costruito camminando dal vivo dentro l'API; riguarda
+          direttamente le due sottosezioni seguenti.
+\end{itemize}
 
-Per ciascun terminal, la funzione ricostruisce la stessa sequenza di nodi che
-un'esplorazione dal vivo produrrebbe, usando la \texttt{chain\_prefix} e i
-valori già memorizzati nel terminal stesso durante la fase di scoperta. Il
-percorso alternativo, disponibile disattivando questa opzione, cammina invece
-passo per passo dentro l'API interattiva del CVL, con una cache condivisa dei
-terminal che risultano irraggiungibili (\emph{morti}), per non ripetere
-inutilmente gli stessi tentativi falliti in record successivi; questo
-percorso non è mai stato usato nei run di produzione, dato il valore di
-\texttt{offline\_history} in \cref{lst:common-config}. Indipendentemente dal
-percorso scelto per lo scheletro, il testo effettivo della query SPARQL viene
-sempre ottenuto con un'unica chiamata finale all'API, che traduce la
-struttura accumulata in una query eseguibile: questo passaggio non è mai
-eseguito localmente, in nessuna delle due modalità: il risparmio della
-modalità offline riguarda quindi solo le numerose chiamate necessarie per
-esplorare le singole proprietà, non la chiamata finale che restituisce la
-query vera e propria.
+\subsubsection{Il percorso online}
+
+Quando \texttt{offline\_history} è disattivato, lo scheletro viene
+costruito camminando passo per passo tramite chiamate ricorsive nell'API
+del CVL, esplorando in modo consequenziale proprietà e relazioni. Per ogni
+terminal della combinazione, il sistema percorre uno per uno i salti della
+sua chain (\cref{sec:impl-routes}) e, a partire dall'entità radice, a ogni
+salto chiede all'API di proseguire dal nodo raggiunto fino a quel momento
+verso il nodo successivo, accumulando progressivamente lo stato della
+query in costruzione finché non raggiunge il nodo del terminal stesso.
+Questa procedura ripercorre esattamente il percorso che la fase di
+scoperta della mappa aveva già seguito per costruire la mappa iniziale
+(\cref{sec:impl-discovery}); la differenza è che lì veniva fatto una volta
+per ogni proprietà isolata, per costruire la mappa, mentre qui viene
+ripetuto per intero a ogni singolo record. Durante questa fase di
+costruzione online sono inoltre presenti alcuni meccanismi di resilienza,
+introdotti per gestire le condizioni anomale e gli eventuali problemi che
+possono verificarsi durante le chiamate all'API. Tali meccanismi si sono
+rivelati necessari nel corso dello sviluppo e vengono descritti di
+seguito.
+
+\begin{itemize}
+    \item se l'API impiega troppo a rispondere, il fallimento è considerato
+          transitorio, perché un tentativo successivo potrebbe ancora
+          avere successo, e non viene memorizzato in nessuna cache;
+    \item se invece risponde ma senza risultati utili, il terminal è considerato
+          irraggiungibile in modo permanente, con due conseguenze distinte:
+          \begin{itemize}
+              \item viene memorizzato in una cache condivisa così che i tentativi
+                    successivi lo scartino subito senza ripetere l'esplorazione;
+              \item il record in corso esclude dalla combinazione quel singolo
+                    terminal e la generazione prosegue con gli altri rimasti
+                    (esiste una modalità più rigida, mai usata in produzione,
+                    che interromperebbe l'intero tentativo al primo terminal
+                    irraggiungibile);
+          \end{itemize}
+    \item indipendentemente dai primi due, per non ripetere l'intera esplorazione quando
+          la stessa combinazione di terminal ricorre in record diversi, lo scheletro
+          completo viene tenuto in una cache separata, indicizzata sulla combinazione
+          esatta richiesta, e riusato direttamente se si ripresenta, con solo il
+          riempimento dei valori concreti (\cref{sec:impl-values}) che cambia da un record
+          all'altro.
+\end{itemize}
+
+\subsubsection{Il percorso offline}
+
+Con \texttt{offline\_history} attivo, come nei run di produzione, tutta la
+camminata appena descritta viene saltata e lo scheletro non si costruisce
+esplorando dal vivo l'API di CVL, ma viene ricostruito interamente in locale a
+partire dai dati che la scoperta della mappa aveva già raccolto per ciascuna
+proprietà (\cref{sec:impl-discovery}). Per ogni terminal coinvolto nella
+combinazione, il sistema ricrea la stessa sequenza di nodi intermedi che
+un'esplorazione dal vivo avrebbe prodotto, camminando sulla sequenza di salti
+già nota (registrata al momento della scoperta delle route,
+\cref{sec:impl-routes}) e usando i valori possibili già memorizzati per quel
+terminal, senza doverli richiedere di nuovo; con lo scheletro pronto, si arriva
+così direttamente all'unico passaggio che nessuno dei due percorsi può evitare,
+ovvero la chiamata finale descritta di seguito.
+\\\\
+Indipendentemente dal percorso scelto per lo scheletro infatti, il testo
+effettivo della query SPARQL viene sempre ottenuto con un'unica chiamata finale
+all'API, che traduce la struttura accumulata in una query eseguibile. Questo
+passaggio non è mai eseguito localmente, in nessuna delle due modalità,
+rappresentando così l'unica chiamata API fatta dal percorso offline. Su questa
+stessa chiamata finale interviene anche il quinto flag di
+\cref{lst:common-config}, \texttt{validate\_sparql}, ripreso e motivato più
+avanti insieme agli altri controlli di qualità applicati al risultato finale
+(\cref{sec:impl-output}).
 
 \subsection{Riempimento dei valori}
 \label{sec:impl-values}
