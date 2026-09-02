@@ -1199,16 +1199,14 @@ syntax_error = (
 )
           \end{lstlisting}
 
-    \item Il terzo verifica che la coppia non sia un duplicato, né come
-          solo prompt né come combinazione di prompt e query insieme.
-          Senza questo controllo, lo stesso esempio potrebbe comparire più
-          volte nel dataset semplicemente perché il campionamento ha scelto
-          per caso, in record diversi, la stessa combinazione di route e
-          valori, riducendo la varietà effettiva senza che il conteggio
-          totale dei record se ne accorga. In caso di prompt duplicato, il
-          sistema non scarta subito il tentativo: ritenta con nuovi valori
-          scelti a caso fino a 4 volte (\texttt{VALUE\_REROLLS}) prima di
-          arrendersi definitivamente.
+    \item Il terzo verifica l'assenza di duplicati confrontando il nuovo prompt
+          con quelli già visti e l'hash della coppia prompt-query con quelli già
+          registrati. Senza questo controllo, il campionamento potrebbe scegliere
+          per caso, in record diversi, la stessa combinazione di route e valori,
+          riducendo la varietà effettiva senza che il conteggio totale dei
+          record se ne accorga. In caso di prompt duplicato, il sistema ritenta
+          con nuovi valori scelti a caso fino a 4 volte
+          (\texttt{VALUE\_REROLLS}) prima di arrendersi.
 \end{enumerate}
 
 Solo le coppie che superano tutti e tre i controlli vengono accumulate in
