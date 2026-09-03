@@ -1216,7 +1216,7 @@ syntax_error = (
 Solo le coppie che superano tutti e tre i controlli vengono accumulate in
 un buffer e scritte su disco a gruppi di 50 (\texttt{BUFFER\_SIZE}).
 
-\subsection{Generazione manuale nell'interfaccia}
+\subsection{Generazione manuale a entità singola}
 \label{sec:impl-manual}
 
 Tutto quanto descritto finora in questo capitolo, dalla scoperta della
@@ -1252,7 +1252,7 @@ da quell'entità con i limiti scelti.
 %\end{figure}
 
 Questa modalità non è pensata per costruire un dataset completo, ma per
-esplorare e calibrare. Al termine della generazione infatti, il pannello non si
+esplorare e calibrare. Al termine della generazione, infatti, il pannello non si
 limita a riportare un conteggio finale, ma mostra due schede separate: una con i
 record effettivamente creati, in un'anteprima tabellare di prompt e query, e una
 con quelli scartati, raggruppati per motivo di scarto esatto, tra cui i tre già
@@ -1267,99 +1267,40 @@ calcolo e prolungare inutilmente i tempi di attesa.
 \subsection{Configurazione dei tier da file esterno}
 \label{sec:impl-tier-config}
 
-Ripetere la procedura manuale appena descritta per ciascuna delle 45
-entità dello schema, una alla volta, sarebbe impraticabile, e non
-lascerebbe alcuna traccia dichiarata e riproducibile delle scelte fatte.
-Il generatore risolve questo problema raggruppando più entità sotto uno
-stesso insieme di parametri condivisi, un \emph{tier}: per ciascun tier
-configurato, per ciascuna entità elencata al suo interno, viene eseguito
-lo stesso motore di generazione già descritto nelle sottosezioni
-precedenti, con i parametri propri di quel tier
-(\texttt{min\_relations}, \texttt{max\_relations},
-\texttt{min\_properties}, \texttt{max\_properties}, \texttt{min\_paths},
-\texttt{max\_paths}, \texttt{min\_values}, \texttt{max\_values}) e un
+La procedura manuale appena descritta agisce su una sola entità alla
+volta, ma entità diverse dello schema possono richiedere impostazioni
+diverse tra loro a seconda di quanto siano rilevanti per il compito, di
+quanto siano profondamente connesse al resto del grafo, o di quante
+variazioni valga la pena rappresentarne.
+
+Il generatore permette di
+raggruppare più entità sotto uno stesso insieme di parametri condivisi, un
+\emph{tier}, così da poter personalizzare queste impostazioni gruppo per
+gruppo invece di doverle applicare in modo uniforme a tutto lo schema, e
+di poter riutilizzare la stessa configurazione, o adattarla facilmente, in
+generazioni future. Per ciascun tier configurato, per ciascuna entità
+elencata al suo interno, viene eseguito lo stesso motore di generazione
+già descritto nelle sottosezioni precedenti, con i parametri propri di
+quel tier (gli stessi utilizzati nella \cref{sec:impl-manual}) e un
 numero massimo di record da generare per quell'entità
 (\texttt{sample\_size\_per\_entity}). I record delle singole entità
 confluiscono infine in un unico file (\cref{sec:impl-split}).
 
-Per generare il dataset di questa tesi sono state scritte due
-configurazioni di tier di questo tipo, \texttt{TIERS} e
-\texttt{SECOND\_TIERS}, create appositamente per questa generazione e non
-pensate come uno standard riutilizzabile del sistema: al momento in cui
-sono state scritte, erano liste Python definite direttamente nel codice
-sorgente, non file esterni. Le due liste raggruppano lo stesso insieme di
-45 entità secondo criteri diversi, applicati in due passate di generazione
-separate. \texttt{TIERS} raggruppa le entità per distanza dal nodo
-\texttt{Patient} nel grafo (i sei livelli discussi in
-\cref{chap:progettazione}); \texttt{SECOND\_TIERS} raggruppa le stesse
-entità per tema clinico (\emph{demographics}, \emph{diagnosis\_staging},
-\emph{treatment}, \emph{measurements\_labs}, \emph{symptoms},
-\emph{services}). Il commento nel codice sorgente motiva esplicitamente
-questa scelta: raggruppamenti diversi fanno finire entità diverse nella
-stessa query multi-relazione, quindi anche un'entità già coperta nella
-prima passata compare, nella seconda, in combinazioni differenti,
-ottenendo varietà genuina invece di ricampionare gli stessi pattern di
-co-occorrenza già visti. Le due configurazioni differiscono anche nei
-parametri di generazione: mentre in \texttt{TIERS} il numero di proprietà
-vincolate per record varia entro un intervallo (tipicamente 1--3), in
-\texttt{SECOND\_TIERS} ogni gruppo impone \texttt{min\_properties} e
-\texttt{max\_properties} uguali tra loro (sempre 4), producendo record
-strutturalmente più complessi e uniformi rispetto alla prima passata.
-
-Definire una terza configurazione, o modificare le due esistenti,
-richiedeva a quel tempo di editare direttamente il codice sorgente, senza
-alcuna verifica automatica prima di avviare la generazione: un errore di
-battitura o un valore incoerente si scopriva solo a generazione già
-avviata, magari dopo ore di chiamate all'API. Per superare questo limite,
-il generatore accetta oggi anche una configurazione di tier fornita come
-file JSON esterno, controllata prima di avviare qualunque generazione,
-senza dover toccare il codice sorgente per definirla o modificarla.
-
-\begin{lstlisting}[language=Python, caption={Validazione di una configurazione di tier caricata da file esterno, prima di avviare la generazione.}, label={lst:tier-validate}]
-REQUIRED_TIER_KEYS = {
-    "name", "sample_size_per_entity", "min_relations", "max_relations",
-    "min_paths", "max_paths", "min_properties", "max_properties",
-    "min_values", "max_values", "entities",
-}
-
-def validate_tier_config(tiers) -> None:
-    if not isinstance(tiers, list) or not tiers:
-        raise ValueError("expected a non-empty JSON list of tier objects")
-    seen_names = set()
-    for i, tier in enumerate(tiers):
-        if not isinstance(tier, dict):
-            raise ValueError(f"tier #{i + 1} is not an object")
-        missing = REQUIRED_TIER_KEYS - tier.keys()
-        if missing:
-            raise ValueError(f"tier #{i + 1} is missing: {', '.join(sorted(missing))}")
-        if tier["name"] in seen_names:
-            raise ValueError(f"duplicate tier name: {tier['name']!r}")
-        seen_names.add(tier["name"])
-        if tier["min_relations"] > tier["max_relations"]:
-            raise ValueError(f"tier {tier['name']!r}: min_relations > max_relations")
-        # ... same check repeated for paths, properties and values
-\end{lstlisting}
-
-La funzione di validazione (\cref{lst:tier-validate}) controlla non solo
-che ogni gruppo contenga tutte le chiavi richieste, ma anche che ogni
-intervallo dichiarato sia coerente (nessun \texttt{min} maggiore del
-corrispondente \texttt{max}) e che non vi siano due gruppi con lo stesso
-nome, restituendo un messaggio d'errore specifico invece di un'eccezione
-generica non gestita: un file scritto male viene quindi respinto subito,
-con un motivo preciso, invece di fallire a metà generazione. La funzione
-\texttt{run\_all} (\cref{sec:impl-execution}) accetta un parametro
-\texttt{tiers} opzionale per ricevere questa configurazione esterna al
-posto di quella predefinita.
-
 Questa configurazione esterna è esposta, sul lato dell'interfaccia
-Streamlit, tramite un pannello dedicato che permette di caricare il file,
-ne mostra a schermo un riepilogo (numero di gruppi ed entità coinvolte)
-prima di abilitare il pulsante di avvio, e traduce l'avanzamento della
-generazione in una barra di progresso calcolata sul numero di entità
-completate rispetto al totale. L'output finale non viene scritto in un
-percorso scelto dall'utente: viene reso disponibile direttamente come file
-scaricabile al termine del processo, eliminando la necessità di un
-qualunque accesso al filesystem del server per chi utilizza lo strumento.
+Streamlit, tramite un pannello dedicato che permette di caricare il file
+e ne mostra a schermo un riepilogo, con il numero di gruppi e di entità
+coinvolte, prima di abilitare il pulsante di avvio; l'avanzamento della
+generazione viene poi tradotto in una barra di progresso calcolata sul
+numero di entità completate rispetto al totale. L'output finale viene poi reso disponibile
+direttamente come file scaricabile al termine del processo, eliminando
+così la necessità di un qualunque accesso al filesystem del server per
+chi utilizza lo strumento.
+
+La configurazione dei tier sfrutta una funzione di validazione che non solo
+controlla che ogni gruppo contenga tutte le chiavi richieste, ma anche la
+coerenza dei range di valori selezionati e l'unicità dei nomi dei gruppi; un
+file scritto male viene così respinto subito, con un motivo preciso, invece di
+far fallire la generazione a metà.
 
 \subsection{Split del dataset}
 \label{sec:impl-split}
