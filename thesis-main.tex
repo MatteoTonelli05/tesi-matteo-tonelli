@@ -58,14 +58,195 @@ su knowledge graph clinico-oncologico}
 \chapter{Background}
 \label{chap:background}
 
-Questo capitolo introduce le tecnologie e i concetti fondamentali necessari per
-la comprensione del contributo della tesi. Nelle sezioni successive viene
-presentato il Cancer Virtual Lab, il progetto nel cui ambito si colloca il
-lavoro descritto, seguito dai concetti di knowledge graph e SPARQL, dal problema
-del text-to-SPARQL e dalle sue difficoltà specifiche nel dominio clinico, dai
-lavori correlati sulla costruzione di dataset per questo compito e, infine, dai
-rischi specifici dell'augmentation testuale basata su modelli linguistici di
-grandi dimensioni.
+Questo capitolo introduce il contesto applicativo, le tecnologie di base e i
+riferimenti teorici necessari per comprendere le scelte progettuali e il
+contributo pratico di questo lavoro di tesi.
+
+La trattazione prende avvio dalla presentazione del \textit{Cancer Virtual Lab}
+(CVL), l'infrastruttura di ricerca clinico-oncologica nel cui ambito si colloca
+il sistema sviluppato. Successivamente, vengono esaminati i fondamenti dei
+Knowledge Graph e del linguaggio di interrogazione SPARQL, evidenziando come
+queste tecnologie consentano la modellazione e la consultazione di dati clinici
+complessi ed eterogenei. Viene quindi definito il compito di
+\textit{Text-to-SPARQL}, analizzando le peculiarità e le sfide aperte che
+emergono quando la traduzione da linguaggio naturale a query formali viene
+applicata a un contesto ad elevata specificità come quello biomedico.
+
+Il capitolo si conclude con una rassegna dei principali lavori correlati
+relativi alla costruzione di dataset per il \textit{semantic parsing} e con
+un'analisi critica dei rischi legati all'uso di modelli linguistici di grandi
+dimensioni per la \textit{data augmentation} controllata.
+
+\section{Cancer Virtual Lab}
+\label{sec:bg-cvl}
+
+Il lavoro descritto in questa tesi si colloca nell'ambito del progetto
+\textit{Cancer Virtual Lab} (CVL) \cite{cvl2025platform},
+una piattaforma di \textit{AI Semantica} concepita per supportare la ricerca e
+la cura oncologica guidata dai dati. Il progetto è frutto della collaborazione
+tra entità di ricerca clinica e tecnologica, tra cui l'IRCCS Istituto Romagnolo
+per lo Studio dei Tumori (IRST) "Dino Amadori" e l'Università di Bologna.
+
+Nel contesto oncologico reale, le informazioni cliniche dei pazienti risultano
+fortemente frammentate e disperse tra cartelle cliniche elettroniche (EHR),
+registri di patologia, referti diagnostici ed esami di laboratorio. Tale
+frammentazione ostacola la riutilizzabilità dei dati per la ricerca e rende
+complessa la costruzione di coorti di studio o l'identificazione di pattern
+clinici (come la risposta a terapie neoadiuvanti o l'insorgenza di tossicità
+severe).
+
+Per superare queste limitazioni, la piattaforma CVL implementa un'architettura
+integrata che trasforma i dati clinici eterogenei, strutturati secondo lo
+standard internazionale HL7 FHIR (\textit{Fast Healthcare Interoperability
+    Resources}), in Knowledge Graph interoperabili basati su RDF (\textit{Resource
+    Description Framework}). Questo approccio ha consentito di strutturare una base
+di conoscenza semantica comprendente i dati anonimizzati di oltre 35.000
+pazienti.
+
+Un componente centrale dell'architettura di CVL è rappresentato dall'assistente
+virtuale basato su modelli linguistici di grandi dimensioni (LLM),
+progettato per consentire a medici, oncologi e ricercatori clinici di
+interrogare il Knowledge Graph direttamente in linguaggio naturale. Affinché
+tale interfaccia possa tradurre le domande dell'utente in query SPARQL
+eseguibili ed esenti da errori semantici o sintattici, si rende necessario
+l'addestramento di modelli di traduzione dedicati, la cui realizzazione richiede
+dataset di addestramento accurati, vari e verificabili.
+
+\section{Knowledge Graph, RDF e SPARQL}
+\label{sec:bg-kg-sparql}
+
+I \acfp{KG} rappresentano un paradigma di modellazione e organizzazione della
+conoscenza basato su strutture a grafo, in cui le entità del mondo reale
+costituiscono i nodi e le relazioni logiche o semantiche tra di esse formano gli
+archi.
+
+\subsection{Resource Description Framework (RDF)}
+Lo standard di riferimento per la rappresentazione dei dati all'interno dei
+Knowledge Graph è il \acf{RDF}, raccomandato dal W3C. In RDF, l'informazione
+elementare viene rappresentata tramite la struttura atomica della
+\textit{tripla}:
+\[
+    (\text{Soggetto}, \text{Predicato}, \text{Oggetto})
+\]
+\begin{itemize}
+    \item \textit{il Soggetto}, che identifica l'entità descritta tramite un IRI
+    \item \textit{il Predicato}, che esprime la relazione o la proprietà che lega il soggetto
+    \item \textit{l'Oggetto}, che rappresenta un'altra entità (anche questa identificata da un IRI) oppure un valore letterale
+\end{itemize}
+
+L'insieme dei predicati ammessi, delle classi e dei vincoli logici definisce
+l'ontologia o schema del grafo che, nel contesto della piattaforma CVL
+\cite{cvl2025platform}, permette di formalizzare in
+modo rigoroso concetti clinici complessi come le classificazioni TNM, gli
+score prestazionali ECOG, la presenza di biomarker, la somministrazione di
+terapie o l'insorgenza di eventi avversi  garantendo l'interoperabilità
+semantica tra fonti di dati eterogenee.
+
+\subsection{SPARQL Query Language}
+Per la consultazione e l'estrazione di informazioni da grafi RDF si utilizza
+SPARQL, il linguaggio di interrogazione standard per il Web Semantico.
+
+A differenza dei linguaggi per basi di dati relazionali (come SQL), SPARQL opera
+tramite il meccanismo del \textit{graph pattern matching}, in cui la query
+definisce uno schema di triple contenente variabili da determinare (es.
+\texttt{?patient}, \texttt{?diagnosis}) e individua nel grafo tutti i
+sotto-grafi che soddisfano tale combinazione di vincoli. Attraverso clausole
+quali \texttt{FILTER} e \texttt{VALUES}, è possibile applicare condizioni
+stringenti sui valori letterali, ad esempio per restringere la ricerca a
+intervalli temporali specifici o a valori di laboratorio controllati.
+
+\section{Lavori correlati e benchmark di Text-to-SPARQL}
+\label{sec:bg-related-work}
+
+La costruzione di dataset di addestramento e benchmark per il compito di
+\textit{Text-to-SPARQL} ha seguito un'evoluzione significativa negli ultimi
+anni, passando da corpora sintetici\protect\footnote{Un corpus sintetico è un insieme di
+    dati generato artificialmente tramite algoritmi, grammatiche formali o modelli
+    generativi, anziché raccolto da interazioni umane reali, al fine di ovviare alla
+    scarsità di dati annotati nel dominio di interesse.} basati su template a
+metodologie avanzate guidate da modelli di linguaggio.
+
+I benchmark pubblici di riferimento, come LC-QuAD \cite{lcquad1} e la sua
+successiva evoluzione LC-QuAD 2.0 \cite{lcquad2}, hanno introdotto metodologie
+per la generazione di coppie domanda-query su larga scala indirizzate a basi di
+conoscenza generali quali DBpedia e Wikidata. Tuttavia, tali approcci mostrano
+limitazioni quando applicati a contesti verticali: la complessità e la
+specificità dei Knowledge Graph di dominio (come quello oncologico di CVL) richiedono una copertura mirata delle classi e una
+rigorosa preservazione dei vincoli semantici che i dataset generali non offrono.
+
+Per superare la rigidità dei template tradizionali, diversi lavori hanno
+esplorato tecniche di sintesi automatizzata delle domande. Ad esempio, la
+metodologia MK-SQuIT \cite{mksquit} propone un approccio basato sul riempimento
+iterativo di template per generare formulazioni naturali a partire da strutture
+logiche sottostanti. Più di recente, l'impiego di Large Language Model per la
+generazione e la validazione di dataset sintetici di Text-to-SPARQL ha
+dimostrato la capacità degli LLM di arricchire la varietà linguistica dei prompt
+\cite{ibm2025}. Ciononostante, la sintesi automatizzata mediante LLM introduce
+il rischio di allucinazioni e incongruenze tra il testo generato e i filtri
+della query SPARQL associata, rendendo indispensabili meccanismi espliciti di
+mascheramento, validazione e controllo di qualità.
+
+\section{Fine-tuning di Large Language Model}
+\label{sec:bg-finetuning}
+
+I Large Language Model (LLM) pre-addestrati su corpora generici possiedono una
+vasta conoscenza linguistica di base, ma spesso mostrano prestazioni
+insufficienti quando applicati a compiti specialistici che richiedono il
+rispetto di sintassi rigide o di ontologie di dominio, come la traduzione
+\textit{Text-to-SPARQL} trattata in questa tesi. Per adattare un modello
+pre-addestrato a un compito specifico si ricorre alla tecnica del
+\textit{fine-tuning}.
+
+\subsection{Adattamento supervisionato (SFT)}
+Il \textit{Supervised Fine-Tuning} (SFT) consiste nel prosieguo
+dell'addestramento del modello su un dataset specifico composto da coppie di
+input e output desiderati (nel nostro contesto, la domanda in linguaggio
+naturale e la query SPARQL corrispondente). Durante questo processo, i pesi
+della rete neurale vengono aggiornati tramite retropropagazione dell'errore per
+minimizzare la discrepanza tra la sequenza generata e quella target, insegnando
+al modello la struttura sintattica del linguaggio di destinazione e la semantica
+dei predicati dell'ontologia.
+
+\subsection{Tecniche di adattamento efficiente (PEFT, LoRA e QLoRA)}
+L'aggiornamento della totalità dei parametri di un LLM (\textit{Full
+    Fine-Tuning}) richiede risorse computazionali ingenti e memorie GPU elevate,
+spesso proibitive in contesti applicativi reali. Per ovviare a questo limite,
+sono state introdotte le tecniche di \textit{Parameter-Efficient Fine-Tuning}
+(PEFT).
+
+Tra le metodologie PEFT più diffuse figura \textit{Low-Rank Adaptation} (LoRA)
+\cite{hu2021lora}. Invece di modificare la matrice dei pesi originali $W_0 \in
+    \mathbb{R}^{d \times k}$ del modello (che viene mantenuta congelata), LoRA
+approssima l'aggiornamento dei pesi $\Delta W$ tramite il prodotto di due
+matrici a rango ridotto $A \in \mathbb{R}^{r \times k}$ e $B \in \mathbb{R}^{d
+        \times r}$, dove il rango $r \ll \min(d, k)$:
+\[
+    W = W_0 + \Delta W = W_0 + B \cdot A
+\]
+Questo approccio riduce drasticamente il numero di parametri addestrabili
+(spesso di oltre il 99\%), abbattendo i requisiti di memoria senza compromettere
+la qualità delle prestazioni finali.
+
+L'evoluzione \textit{Quantized LoRA} (QLoRA) estende questo principio
+quantizzando il modello di base congelato a una precisione di 4-bit (utilizzando
+il formato \textit{NormalFloat4}), consentendo di eseguire l'addestramento di
+LLM di grandi dimensioni su hardware di classe consumer o su singola GPU locale,
+in piena coerenza con i vincoli di riservatezza e sicurezza sui dati clinici.
+
+\subsection{Funzione di perdita e formato delle istruzioni}
+Durante il fine-tuning per compiti di generazione di codice o query formali, i
+dati vengono tipicamente strutturati in formato istruzione (\textit{Instruction
+    Format}), dove il prompt di input definisce il contesto o il ruolo del sistema e
+l'output target rappresenta la query SPARQL esatta.
+
+La funzione di perdita usata è la \textit{Cross-Entropy Loss} calcolata sui
+token sequenziali. Per ottimizzare l'addestramento ed evitare che il modello
+spenda capacità computazionale per imparare a ripetere la domanda dell'utente,
+si applica comunemente il mascheramento della loss sui token di input
+(\textit{Data Collator for Completion Only}): la perdita viene calcolata ed
+elaborata esclusivamente sui token corrispondenti alla query SPARQL target,
+forzando il modello a concentrare l'apprendimento unicamente sulla generazione
+della struttura formale corretta.
 
 \chapter{Analisi}
 \label{chap:analisi}
@@ -246,6 +427,35 @@ output prodotti dalle fasi precedenti prima del loro inserimento nel dataset.
 
 Questa sezione descrive le decisioni progettuali alla base del primo stadio del
 sistema, responsabile della generazione strutturata delle coppie prompt-query.
+
+\subsection{La pipeline di generazione}
+\label{sec:design-pipeline}
+
+Generare una singola coppia prompt-query valida a partire da un'entità dello
+schema richiede diversi passaggi logicamente distinti tra loro. Occorre prima
+sapere quali proprietà e relazioni siano disponibili per quell'entità, poi
+individuare i percorsi che permettono di raggiungerle nel grafo, poi scegliere
+quali di quelle proprietà vincolare rispettando i limiti imposti, poi tradurre
+questa scelta in una struttura di query, poi decidere con quali valori
+concreti riempirla, poi trasformare il tutto in un testo in linguaggio
+naturale, e infine verificare che il risultato ottenuto sia davvero corretto.
+Concatenare tutti questi passaggi in un'unica procedura indifferenziata
+renderebbe il codice difficile da comprendere, da testare e da modificare,
+perché un cambiamento riguardante anche un solo aspetto, per esempio il modo
+in cui si sceglie un valore, rischierebbe di intrecciarsi con la logica di
+tutti gli altri.
+
+Il generatore struttura quindi questo processo come una pipeline di fasi ben
+definite, ciascuna responsabile di una trasformazione specifica, che riceve
+in ingresso il risultato della fase precedente e produce l'input per quella
+successiva.
+
+Questa scomposizione rende ciascuna fase comprensibile e verificabile in
+isolamento, senza dover ragionare sull'intero processo per capire o
+modificare una singola trasformazione. Apre inoltre la strada, in fase di
+implementazione, a una corrispondenza diretta tra ciascuna fase concettuale
+qui definita e il componente software responsabile di realizzarla
+(\cref{sec:impl-mixin}).
 
 \subsection{Modello del dominio}
 
@@ -532,17 +742,18 @@ cui i due stadi del sistema sono stati sviluppati.
 \subsection{Architettura a mixin}
 \label{sec:impl-mixin}
 
-Il generatore è organizzato attorno a un'unica classe,
+La pipeline di generazione appena introdotta a livello di design
+(\cref{sec:design-pipeline}) è realizzata concretamente da un'unica classe,
 \texttt{BulkDatasetGenerator}, ottenuta mediante ereditarietà multipla da sei
 \emph{mixin}\footnote{Un mixin è una classe pensata per essere combinata con
     altre tramite ereditarietà multipla, fornendo un insieme coeso di funzionalità
-    senza costituire di per sé una gerarchia di tipi completa.}.
-Questa struttura permette di suddividere l'implementazione in responsabilità
-distinte, mantenendo al tempo stesso un'unica interfaccia per l'intero processo
-di generazione. La scelta è coerente con l'obiettivo di mantenere il generatore
-estendibile: le diverse fasi della pipeline possono infatti essere modificate
-o ampliate intervenendo principalmente sul componente che ne implementa la
-relativa responsabilità.
+    senza costituire di per sé una gerarchia di tipi completa.}, uno per
+ciascuna fase della pipeline. Questa struttura permette di mantenere la
+corrispondenza diretta tra fase concettuale e componente software già
+motivata in fase di design, con un'unica interfaccia per l'intero processo
+di generazione: le diverse fasi possono infatti essere modificate o
+ampliate intervenendo principalmente sul mixin che ne implementa la
+relativa responsabilità, senza dover toccare gli altri.
 La composizione della classe principale è riportata nel
 \cref{lst:mixin-composition}.
 
@@ -562,7 +773,9 @@ class BulkDatasetGenerator(
     # parameters
 \end{lstlisting}
 
-In particolare le divisioni consistono in:
+Ciascun mixin realizza una o più delle fasi appena introdotte a livello di
+design, incapsulando le chiamate di rete o coordinando la logica di più
+fasi quando queste sono strettamente collegate tra loro:
 
 \begin{itemize}
     \item \texttt{FilterApiMixin} incapsula le chiamate di rete verso l'API
@@ -584,7 +797,7 @@ In particolare le divisioni consistono in:
 \end{itemize}
 
 Le responsabilità non sono quindi indipendenti, ma cooperano secondo il flusso
-della generazione, tutte fatta ad eccezione di \texttt{ProgressMixin} che costituisce invece una
+della generazione, ad eccezione di \texttt{ProgressMixin}, che costituisce invece una
 responsabilità trasversale, poiché può intervenire durante l'esecuzione delle
 diverse fasi senza rappresentare una fase autonoma della pipeline.
 
@@ -644,7 +857,7 @@ class BulkDatasetGenerator(
     DISCARD_SAMPLES = 500
     VALUE_REROLLS = 4
     MAX_STORED_VALUES = 5000
-    SAMPLING_GIVEUP_STREAK = 25
+    SAMPLING_GIVEUP_STREAK = 250
 \end{lstlisting}
 
 In particolare, tali parametri controllano la dimensione del buffer di
@@ -718,7 +931,7 @@ selezione vuota, indipendentemente dal fatto che nell'esplorazione vera
 delle route quella stessa entità venga poi raggiunta attraverso un percorso
 diretto o attraverso più salti relazionali. La mappa assume quindi che le proprietà e le relazioni disponibili per
 un'entità dipendano solo dal suo tipo, non dal percorso concreto con cui la
-si raggiunge, a differenza dell'API di CVL, che può restituire relazioni
+si raggiunge, a differenza dell'API del CVL, che può restituire relazioni
 diverse a seconda della storia di selezione accumulata fino a quel punto. Questo costo
 viene accettato deliberatamente, perché l'alternativa, interrogare l'API da
 capo ogni volta che una qualunque entità viene esplorata, è proprio il
@@ -1035,7 +1248,7 @@ seguito.
 
 Con \texttt{offline\_history} attivo, come nei run di produzione, tutta la
 camminata appena descritta viene saltata e lo scheletro non si costruisce
-esplorando dal vivo l'API di CVL, ma viene ricostruito interamente in locale a
+esplorando dal vivo l'API del CVL, ma viene ricostruito interamente in locale a
 partire dai dati che la scoperta della mappa aveva già raccolto per ciascuna
 proprietà (\cref{sec:impl-discovery}). Per ogni terminal coinvolto nella
 combinazione, il sistema ricrea la stessa sequenza di nodi intermedi che
@@ -1305,10 +1518,11 @@ far fallire la generazione a metà.
 \subsection{Split del dataset}
 \label{sec:impl-split}
 
-L'ultima fase della pipeline di generazione divide i record consolidati nei set
-di \textit{train}, \textit{validation} e \textit{test}.
+Una volta che tutte le entità dei tier configurati sono state processate e
+unite in un unico file, l'ultimo passo divide i record in train,
+validation e test.
 
-\begin{lstlisting}[language=Python, caption={Suddivisione stratificata del dataset.}, label={lst:split}]
+\begin{lstlisting}[language=Python, caption={Suddivisione del dataset in train, validation e test, stratificata per entità di origine.}, label={lst:split}]
 for entity, recs in by_entity.items():
     rng.shuffle(recs)
     n = len(recs)
@@ -1320,26 +1534,64 @@ for entity, recs in by_entity.items():
     splits["test"].extend(recs[n_train + n_val:])
 \end{lstlisting}
 
-La suddivisione avviene in modo stratificato per entità di origine (con
-proporzioni 80/10/10, vedi \cref{lst:split}): ogni entità mantiene così,
-in ciascuno dei tre insiemi, la stessa proporzione di record che aveva nel
-dataset completo, invece di rischiare che una divisione puramente casuale
-concentri per caso i pochi record di un'entità rara quasi tutti in un solo
-insieme. Le entità con meno di 10 record vengono assegnate interamente al
-set di \textit{train}, in quanto insufficienti per una stima di
-validazione o test statisticamente significativa.
+I record vengono raggruppati per entità di origine e suddivisi
+separatamente per ciascun gruppo, con proporzioni 80/10/10 e seme fisso a
+42 per la riproducibilità (\cref{lst:split}), garantendo così che ogni
+entità sia rappresentata nella stessa proporzione in tutti e tre gli
+split, invece di rischiare che un'entità poco frequente finisca per puro
+caso quasi interamente in uno solo di essi. Le entità con meno di 10
+record totali non vengono suddivise e finiscono interamente in train,
+perché un campione così piccolo non permetterebbe una validazione o un
+test statisticamente significativi.
 
-Per prevenire fenomeni di \textit{data leakage}, lo split precede logicamente la
-fase di \textit{data augmentation}. Eseguire l'augmentation prima della
-suddivisione rischierebbe di distribuire varianti parafrasate dello stesso
-record sorgente tra \textit{train} e \textit{test}, inficiando la capacità di
-generalizzazione del modello. La pipeline richiede pertanto di applicare
-l'augmentation in modo indipendente sui tre sottoinsiemi generati.
+Lo split avviene prima dello stadio di augmentation, non dopo, per una
+ragione precisa. Se l'augmentation venisse eseguita sull'intero dataset
+ancora unito, più varianti parafrasate dello stesso record sorgente
+potrebbero finire sparse su split diversi, contaminando la separazione
+tra train e test con esempi troppo simili tra loro. Il generatore lo
+ricorda esplicitamente in un messaggio di log al termine dello split,
+indicando di eseguire la pipeline di augmentation separatamente su
+ciascuno dei tre file prodotti.
 
 \section{Implementazione dell'augmentation}
 \label{sec:impl-augmentation}
 
-\subsection{Generazione dei placeholder e mascheramento}
+La fase di \textit{data augmentation} ha lo scopo di estendere la varietà
+linguistica dei prompt generati dal primo stadio della pipeline, garantendo al
+contempo che il significato semantico e i riferimenti puntuali alla query SPARQL
+sottostante rimangano inalterati (\hyperref[obj:O2]{O2},
+\hyperref[rnf:RNF3]{RNF3}).
+
+Nelle prime fasi di esplorazione del progetto, la variazione stilistica è stata
+affidata direttamente a un modello linguistico, fornendo il testo in chiaro e
+richiedendone la rielaborazione in diversi registri linguistici (dallo stile
+clinico-formale a quello colloquiale). Questa impostazione ingenua ha tuttavia
+evidenziato severi limiti pratici:
+\begin{enumerate}
+    \item \textbf{Alterazione e perdita di valori clinici
+              (\textit{hallucination}):} Il modello tendeva a modificare o omettere
+          identificativi, date, codici clinici e valori booleani, compromettendo la
+          corrispondenza univoca tra il prompt e i filtri della query SPARQL.
+    \item \textbf{Instabilità al crescere della complessità:} All'aumentare del
+          numero di vincoli e valori presenti nella domanda originale, la qualità
+          della parafrasi degradava rapidamente, portando a omissioni di intere
+          clausole.
+    \item \textbf{Convergenza stilistica:} Lasciato libero, l'LLM tendeva a
+          riproporre le medesime strutture sintattiche ricorrenti, vanificando
+          l'obiettivo di varietà stilistica.
+\end{enumerate}
+
+Per superare queste criticità e garantire un tasso di accettazione dei record
+economicamente sostenibile (\hyperref[rnf:RNF1]{RNF1}), la pipeline di
+augmentation è stata completamente riprogettata attorno a un meccanismo rigoroso
+di \textbf{mascheramento dei valori letterali} (mediante placeholder opachi)
+associato a un ciclo iterativo di \textbf{generazione guidata, validazione e
+    fallback}.
+
+Nelle sottosezioni seguenti vengono descritte le componenti software che
+realizzano tale architettura.
+
+\subsection{Mascheramento}
 \label{sec:impl-mask}
 
 Il primo passo di ogni record è la sostituzione di ciascun valore letterale
@@ -1676,14 +1928,8 @@ valore reale durante la riformulazione.
 \backmatter
 
 
-% Commentata temporaneamente: nessun \cite{} nel documento al momento
-% (il capitolo Background, che avrebbe dovuto citare cvl2025pipeline e
-% cvl2025platform, è ancora uno stub). Con nessuna citazione, bibtex fallisce
-% con "I found no \citation commands", innocuo in locale con latexmk, ma
-% fatale nella pipeline CI (rubber). Da riattivare quando il Background sarà
-% scritto e le fonti richiamate con \cite{}.
-% \bibliographystyle{alpha}
-% \bibliography{bibliography}
+\bibliographystyle{alpha}
+\bibliography{bibliography}
 
 \begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non
     la vuoi
