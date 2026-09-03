@@ -1305,11 +1305,10 @@ far fallire la generazione a metà.
 \subsection{Split del dataset}
 \label{sec:impl-split}
 
-Una volta che tutte le entità dei tier configurati sono state processate e
-unite in un unico file, l'ultimo passo divide i record in train, validation
-e test.
+L'ultima fase della pipeline di generazione divide i record consolidati nei set
+di \textit{train}, \textit{validation} e \textit{test}.
 
-\begin{lstlisting}[language=Python, caption={Suddivisione del dataset in train, validation e test, stratificata per entità di origine.}, label={lst:split}]
+\begin{lstlisting}[language=Python, caption={Suddivisione stratificata del dataset.}, label={lst:split}]
 for entity, recs in by_entity.items():
     rng.shuffle(recs)
     n = len(recs)
@@ -1321,15 +1320,21 @@ for entity, recs in by_entity.items():
     splits["test"].extend(recs[n_train + n_val:])
 \end{lstlisting}
 
-Una volta generato l'intero dataset, i record vengono raggruppati per entità
-di origine e suddivisi in train, validation e test separatamente per ciascun
-gruppo, con proporzioni 80/10/10 e seme fisso per la riproducibilità
-(\cref{lst:split}). Le entità con meno di 10 record totali non vengono
-suddivise: finiscono interamente in train, poiché un campione così piccolo
-non permetterebbe una validazione o un test statisticamente significativi.
-Questa stratificazione garantisce che ogni entità sia rappresentata nella
-stessa proporzione in tutti e tre gli split, evitando che un'entità poco
-frequente finisca per puro caso quasi interamente in uno solo di essi.
+La suddivisione avviene in modo stratificato per entità di origine (con
+proporzioni 80/10/10, vedi \cref{lst:split}): ogni entità mantiene così,
+in ciascuno dei tre insiemi, la stessa proporzione di record che aveva nel
+dataset completo, invece di rischiare che una divisione puramente casuale
+concentri per caso i pochi record di un'entità rara quasi tutti in un solo
+insieme. Le entità con meno di 10 record vengono assegnate interamente al
+set di \textit{train}, in quanto insufficienti per una stima di
+validazione o test statisticamente significativa.
+
+Per prevenire fenomeni di \textit{data leakage}, lo split precede logicamente la
+fase di \textit{data augmentation}. Eseguire l'augmentation prima della
+suddivisione rischierebbe di distribuire varianti parafrasate dello stesso
+record sorgente tra \textit{train} e \textit{test}, inficiando la capacità di
+generalizzazione del modello. La pipeline richiede pertanto di applicare
+l'augmentation in modo indipendente sui tre sottoinsiemi generati.
 
 \section{Implementazione dell'augmentation}
 \label{sec:impl-augmentation}
