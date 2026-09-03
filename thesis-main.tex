@@ -48,6 +48,11 @@ su knowledge graph clinico-oncologico}
 \listoffigures     % (optional) comment if empty
 \lstlistoflistings % (optional) comment if empty
 
+\begin{acronym}
+    \acro{KG}{Knowledge Graph}
+    \acro{RDF}{Resource Description Framework}
+\end{acronym}
+
 \mainmatter
 
 \chapter{Introduzione}
@@ -58,24 +63,17 @@ su knowledge graph clinico-oncologico}
 \chapter{Background}
 \label{chap:background}
 
-Questo capitolo introduce il contesto applicativo, le tecnologie di base e i
-riferimenti teorici necessari per comprendere le scelte progettuali e il
-contributo pratico di questo lavoro di tesi.
+Questo capitolo fornisce le nozioni fondamentali per comprendere il contesto e
+le scelte tecniche del progetto.
 
-La trattazione prende avvio dalla presentazione del \textit{Cancer Virtual Lab}
-(CVL), l'infrastruttura di ricerca clinico-oncologica nel cui ambito si colloca
-il sistema sviluppato. Successivamente, vengono esaminati i fondamenti dei
-Knowledge Graph e del linguaggio di interrogazione SPARQL, evidenziando come
-queste tecnologie consentano la modellazione e la consultazione di dati clinici
-complessi ed eterogenei. Viene quindi definito il compito di
-\textit{Text-to-SPARQL}, analizzando le peculiarità e le sfide aperte che
-emergono quando la traduzione da linguaggio naturale a query formali viene
-applicata a un contesto ad elevata specificità come quello biomedico.
-
-Il capitolo si conclude con una rassegna dei principali lavori correlati
-relativi alla costruzione di dataset per il \textit{semantic parsing} e con
-un'analisi critica dei rischi legati all'uso di modelli linguistici di grandi
-dimensioni per la \textit{data augmentation} controllata.
+La trattazione parte dalla presentazione del \textit{Cancer Virtual Lab} (CVL),
+la piattaforma clinico-oncologica in cui si inserisce questo lavoro.
+Successivamente, vengono introdotti i concetti di Knowledge Graph, RDF e SPARQL,
+utili a comprendere come i dati sanitari vengono modellati e interrogati.
+Infine, il capitolo passa in rassegna i principali benchmark di letteratura per
+il compito di \textit{Text-to-SPARQL} e analizza le tecniche di
+\textit{fine-tuning} impiegate per specializzare i modelli linguistici nel
+dominio clinico.
 
 \section{Cancer Virtual Lab}
 \label{sec:bg-cvl}
@@ -99,7 +97,7 @@ Per superare queste limitazioni, la piattaforma CVL implementa un'architettura
 integrata che trasforma i dati clinici eterogenei, strutturati secondo lo
 standard internazionale HL7 FHIR (\textit{Fast Healthcare Interoperability
     Resources}), in Knowledge Graph interoperabili basati su RDF (\textit{Resource
-    Description Framework}). Questo approccio ha consentito di strutturare una base
+    Description Framework}) \cite{cvl2025pipeline}. Questo approccio ha consentito di strutturare una base
 di conoscenza semantica comprendente i dati anonimizzati di oltre 35.000
 pazienti.
 
@@ -139,7 +137,7 @@ l'ontologia o schema del grafo che, nel contesto della piattaforma CVL
 \cite{cvl2025platform}, permette di formalizzare in
 modo rigoroso concetti clinici complessi come le classificazioni TNM, gli
 score prestazionali ECOG, la presenza di biomarker, la somministrazione di
-terapie o l'insorgenza di eventi avversi  garantendo l'interoperabilità
+terapie o l'insorgenza di eventi avversi, garantendo l'interoperabilità
 semantica tra fonti di dati eterogenee.
 
 \subsection{SPARQL Query Language}
@@ -170,21 +168,21 @@ I benchmark pubblici di riferimento, come LC-QuAD \cite{lcquad1} e la sua
 successiva evoluzione LC-QuAD 2.0 \cite{lcquad2}, hanno introdotto metodologie
 per la generazione di coppie domanda-query su larga scala indirizzate a basi di
 conoscenza generali quali DBpedia e Wikidata. Tuttavia, tali approcci mostrano
-limitazioni quando applicati a contesti verticali: la complessità e la
+limitazioni quando applicati a contesti verticali, infatti la complessità e la
 specificità dei Knowledge Graph di dominio (come quello oncologico di CVL) richiedono una copertura mirata delle classi e una
 rigorosa preservazione dei vincoli semantici che i dataset generali non offrono.
 
 Per superare la rigidità dei template tradizionali, diversi lavori hanno
-esplorato tecniche di sintesi automatizzata delle domande. Ad esempio, la
-metodologia MK-SQuIT \cite{mksquit} propone un approccio basato sul riempimento
-iterativo di template per generare formulazioni naturali a partire da strutture
-logiche sottostanti. Più di recente, l'impiego di Large Language Model per la
-generazione e la validazione di dataset sintetici di Text-to-SPARQL ha
-dimostrato la capacità degli LLM di arricchire la varietà linguistica dei prompt
-\cite{ibm2025}. Ciononostante, la sintesi automatizzata mediante LLM introduce
-il rischio di allucinazioni e incongruenze tra il testo generato e i filtri
-della query SPARQL associata, rendendo indispensabili meccanismi espliciti di
-mascheramento, validazione e controllo di qualità.
+esplorato tecniche di sintesi automatizzata delle domande come, ad esempio, la
+metodologia MK-SQuIT \cite{mksquit}, la quale propone un approccio basato sul
+riempimento iterativo di template per generare formulazioni naturali a partire
+da strutture logiche sottostanti. Più di recente, l'impiego di Large Language
+Model per la generazione e la validazione di dataset sintetici di Text-to-SPARQL
+ha dimostrato la capacità degli LLM di arricchire la varietà linguistica dei
+prompt \cite{ibm2025}. Ciononostante, la sintesi automatizzata mediante LLM
+introduce il rischio di allucinazioni e incongruenze tra il testo generato e i
+filtri della query SPARQL associata, rendendo indispensabili meccanismi
+espliciti di mascheramento, validazione e controllo di qualità.
 
 \section{Fine-tuning di Large Language Model}
 \label{sec:bg-finetuning}
@@ -200,51 +198,73 @@ pre-addestrato a un compito specifico si ricorre alla tecnica del
 \subsection{Adattamento supervisionato (SFT)}
 Il \textit{Supervised Fine-Tuning} (SFT) consiste nel prosieguo
 dell'addestramento del modello su un dataset specifico composto da coppie di
-input e output desiderati (nel nostro contesto, la domanda in linguaggio
-naturale e la query SPARQL corrispondente). Durante questo processo, i pesi
+input e output desiderati. Durante questo processo, i pesi
 della rete neurale vengono aggiornati tramite retropropagazione dell'errore per
 minimizzare la discrepanza tra la sequenza generata e quella target, insegnando
 al modello la struttura sintattica del linguaggio di destinazione e la semantica
-dei predicati dell'ontologia.
+dei predicati dell'ontologia. La scelta di \emph{quanti} e \emph{quali}
+parametri aggiornare durante questo processo distingue diverse strategie di
+fine-tuning, descritte di seguito.
+
+\subsection{Full Fine-Tuning}
+Nella sua forma più diretta, il fine-tuning aggiorna la totalità dei
+parametri del modello pre-addestrato, esattamente come avviene durante il
+pre-addestramento originale, ma su un dataset più piccolo e specifico. Questo
+approccio, detto \textit{Full Fine-Tuning}, offre in linea di principio la
+massima capacità di adattamento, poiché nessun parametro resta vincolato al
+proprio valore originale.
+
+Il costo computazionale è però proporzionalmente elevato. Oltre allo spazio
+necessario per i pesi del modello stesso, l'ottimizzatore deve mantenere in
+memoria stati aggiuntivi per ciascun parametro addestrabile (ad esempio, gli
+ottimizzatori della famiglia Adam richiedono due valori di momento per ogni
+peso), moltiplicando di fatto i requisiti di memoria rispetto alla sola
+dimensione del modello. Per modelli di grandi dimensioni, questo può rendere
+il Full Fine-Tuning impraticabile su hardware di classe consumer o con
+risorse di calcolo limitate.
 
 \subsection{Tecniche di adattamento efficiente (PEFT, LoRA e QLoRA)}
-L'aggiornamento della totalità dei parametri di un LLM (\textit{Full
-    Fine-Tuning}) richiede risorse computazionali ingenti e memorie GPU elevate,
-spesso proibitive in contesti applicativi reali. Per ovviare a questo limite,
-sono state introdotte le tecniche di \textit{Parameter-Efficient Fine-Tuning}
-(PEFT).
+Per ovviare a questo limite, sono state introdotte le tecniche di
+\textit{Parameter-Efficient Fine-Tuning} (PEFT), che aggiornano solo una
+piccola porzione dei parametri del modello, o ne introducono di nuovi in
+quantità ridotta, lasciando la maggior parte dei pesi originali invariata.
 
 Tra le metodologie PEFT più diffuse figura \textit{Low-Rank Adaptation} (LoRA)
-\cite{hu2021lora}. Invece di modificare la matrice dei pesi originali $W_0 \in
-    \mathbb{R}^{d \times k}$ del modello (che viene mantenuta congelata), LoRA
-approssima l'aggiornamento dei pesi $\Delta W$ tramite il prodotto di due
-matrici a rango ridotto $A \in \mathbb{R}^{r \times k}$ e $B \in \mathbb{R}^{d
-        \times r}$, dove il rango $r \ll \min(d, k)$:
+\cite{hu2021lora} che, invece di modificare la matrice dei pesi originali $W_0
+    \in \mathbb{R}^{d \times k}$ del modello, approssima l'aggiornamento dei pesi
+$\Delta W$ tramite il prodotto di due matrici a rango ridotto $A \in
+    \mathbb{R}^{r \times k}$ e $B \in \mathbb{R}^{d \times r}$, dove il rango $r \ll
+    \min(d, k)$:
 \[
     W = W_0 + \Delta W = W_0 + B \cdot A
 \]
-Questo approccio riduce drasticamente il numero di parametri addestrabili
-(spesso di oltre il 99\%), abbattendo i requisiti di memoria senza compromettere
-la qualità delle prestazioni finali.
+Solo le matrici $A$ e $B$, molto più piccole della matrice originale, vengono
+addestrate e mantenute in memoria con i relativi stati dell'ottimizzatore;
+$W_0$ resta congelata e viene caricata una sola volta. Questo approccio
+riduce drasticamente il numero di parametri addestrabili (spesso di oltre il
+99\%), abbattendo i requisiti di memoria rispetto al Full Fine-Tuning, a
+fronte di una capacità di adattamento inferiore in linea di principio, poiché
+l'aggiornamento è vincolato a un sottospazio di rango basso.
 
 L'evoluzione \textit{Quantized LoRA} (QLoRA) estende questo principio
 quantizzando il modello di base congelato a una precisione di 4-bit (utilizzando
-il formato \textit{NormalFloat4}), consentendo di eseguire l'addestramento di
-LLM di grandi dimensioni su hardware di classe consumer o su singola GPU locale,
-in piena coerenza con i vincoli di riservatezza e sicurezza sui dati clinici.
+il formato \textit{NormalFloat4}), riducendo ulteriormente la memoria
+occupata da $W_0$ stessa e non solo dagli stati dell'ottimizzatore,
+consentendo di eseguire l'addestramento di
+LLM di grandi dimensioni su hardware di classe consumer o su singola GPU locale.
 
 \subsection{Funzione di perdita e formato delle istruzioni}
 Durante il fine-tuning per compiti di generazione di codice o query formali, i
 dati vengono tipicamente strutturati in formato istruzione (\textit{Instruction
     Format}), dove il prompt di input definisce il contesto o il ruolo del sistema e
-l'output target rappresenta la query SPARQL esatta.
+l'output target rappresenta la sequenza da generare.
 
 La funzione di perdita usata è la \textit{Cross-Entropy Loss} calcolata sui
 token sequenziali. Per ottimizzare l'addestramento ed evitare che il modello
-spenda capacità computazionale per imparare a ripetere la domanda dell'utente,
+spenda capacità computazionale per imparare a ripetere il prompt di input,
 si applica comunemente il mascheramento della loss sui token di input
 (\textit{Data Collator for Completion Only}): la perdita viene calcolata ed
-elaborata esclusivamente sui token corrispondenti alla query SPARQL target,
+elaborata esclusivamente sui token corrispondenti all'output target,
 forzando il modello a concentrare l'apprendimento unicamente sulla generazione
 della struttura formale corretta.
 
@@ -255,7 +275,7 @@ della struttura formale corretta.
 \section{Obiettivi}
 
 L'obiettivo primario del progetto è la creazione di una pipeline in grado di
-costruire di un dataset annotato per il fine-tuning di un modello linguistico di
+costruire un dataset annotato per il fine-tuning di un modello linguistico di
 dimensioni contenute, destinato alla traduzione di domande in linguaggio
 naturale in query SPARQL da eseguire sul knowledge graph del Cancer Virtual Lab.
 Da questo obiettivo generale derivano quattro obiettivi più specifici, che hanno
@@ -356,9 +376,13 @@ non direttamente osservabili nel singolo output prodotto.
           elevato da rendere il processo economicamente sostenibile in termini
           di tempo di calcolo.
 
-    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Riproducibilità in caso di interruzione}. Il
-          sistema deve essere in grado di riprendere una generazione interrotta
-          senza ripetere il lavoro già completato.
+    \item[\textbf{RNF2}]\label{rnf:RNF2} \textit{Resilienza a interruzioni}. A
+          causa del vincolo sull'esecuzione locale imposto da
+          \hyperref[vinc:V2]{V2}, che comporta risorse di calcolo limitate,
+          tempi di elaborazione prolungati e un maggior rischio di
+          interruzioni, il sistema deve adottare meccanismi che permettano
+          di limitare la perdita di lavoro già svolto in caso di arresto
+          imprevisto.
 
     \item[\textbf{RNF3}]\label{rnf:RNF3} \textit{Robustezza semantica}. Il sistema deve
           limitare il rischio che la variazione linguistica modifichi,
