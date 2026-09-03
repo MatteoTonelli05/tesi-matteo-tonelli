@@ -847,6 +847,7 @@ per evitare un'ulteriore inefficienza, l'algoritmo imposta una soglia di
 abbandonato e il campionamento procede senza un tetto noto in anticipo.
 
 \subsubsection{Campionamento}
+\label{sec:impl-sampling}
 
 Per ogni record da generare, il numero di route da combinare viene scelto a
 caso entro i limiti configurati. Le route disponibili vengono poi estratte
@@ -1199,62 +1200,120 @@ syntax_error = (
 )
           \end{lstlisting}
 
-    \item Il terzo verifica l'assenza di duplicati confrontando il nuovo prompt
-          con quelli già visti e l'hash della coppia prompt-query con quelli già
-          registrati. Senza questo controllo, il campionamento potrebbe scegliere
-          per caso, in record diversi, la stessa combinazione di route e valori,
+    \item Il terzo verifica che la coppia non sia un duplicato, tenendo in
+          memoria l'insieme dei prompt già visti e l'insieme degli hash
+          calcolati su ogni coppia prompt-query già accettata: un nuovo
+          prompt viene scartato se è già in quell'insieme, una nuova coppia
+          se il suo hash coincide con uno già registrato. Senza questo
+          controllo, il campionamento potrebbe scegliere per caso, in
+          record diversi, la stessa combinazione di route e valori,
           riducendo la varietà effettiva senza che il conteggio totale dei
-          record se ne accorga. In caso di prompt duplicato, il sistema ritenta
-          con nuovi valori scelti a caso fino a 4 volte
+          record se ne accorga. In caso di prompt duplicato, il sistema
+          ritenta con nuovi valori scelti a caso fino a 4 volte
           (\texttt{VALUE\_REROLLS}) prima di arrendersi.
 \end{enumerate}
 
 Solo le coppie che superano tutti e tre i controlli vengono accumulate in
 un buffer e scritte su disco a gruppi di 50 (\texttt{BUFFER\_SIZE}).
 
-\subsection{Le due configurazioni di tier}
-\label{sec:impl-tiers}
+\subsection{Generazione manuale nell'interfaccia}
+\label{sec:impl-manual}
 
-Il generatore non lavora su un'unica configurazione fissa, ma su due elenchi
-di tier alternativi, applicati in due passate di generazione separate sullo
-stesso insieme di 45 entità. \texttt{TIERS} raggruppa le entità per distanza
-dal nodo \texttt{Patient} nel grafo (i sei livelli discussi in
-\cref{chap:progettazione}); \texttt{SECOND\_TIERS} raggruppa le stesse entità
-per tema clinico (\emph{demographics}, \emph{diagnosis\_staging},
-\emph{treatment}, \emph{measurements\_labs}, \emph{symptoms},
-\emph{services}). Il commento nel codice sorgente motiva esplicitamente questa
-scelta: raggruppamenti diversi fanno finire entità diverse nella stessa query
-multi-relazione, quindi anche un'entità già coperta nella prima passata
-compare, nella seconda, in combinazioni differenti, ottenendo varietà
-genuina invece di ricampionare gli stessi pattern di co-occorrenza già visti.
+Tutto quanto descritto finora in questo capitolo, dalla scoperta della
+mappa fino ai controlli di qualità, produce record per \emph{una} entità
+alla volta, data una combinazione specifica di route e proprietà. Il modo
+più diretto per eseguire questo motore è farlo a mano, entità per entità,
+tramite un pannello dell'interfaccia Streamlit, organizzato in cinque
+sezioni.
 
-Oltre al criterio di raggruppamento, le due configurazioni differiscono anche
-nei parametri di generazione: mentre in \texttt{TIERS} il numero di proprietà
-vincolate per record varia entro un intervallo (tipicamente 1--3), in
-\texttt{SECOND\_TIERS} ogni gruppo impone \texttt{min\_properties} e
-\texttt{max\_properties} uguali tra loro (sempre 4), producendo record
-strutturalmente più complessi e uniformi in numero di vincoli rispetto alla
-prima passata.
+\begin{itemize}
+    \item \textbf{Graph Map}: precondizione per tutto il resto, ha un pulsante che permette di caricare la mappa del grafo (\cref{sec:impl-discovery}) e ne mostra un riepilogo (numero di entità, proprietà e relazioni scoperte) una volta completata.
+    \item \textbf{Mode}: sceglie tra questa modalità a entità singola e la generazione automatica da file di tier (\cref{sec:impl-tier-config}).
+    \item \textbf{Starting Entity}: un menu a tendina per scegliere l'unica entità radice da generare.
+    \item \textbf{Configuration}: quattro slider, uno per relazioni da attraversare, proprietà per percorso, percorsi simultanei e valori per proprietà.
+    \item \textbf{Generation Mode} e \textbf{History building}: espongono direttamente, tramite interruttori e caselle di spunta, parametri già discussi altrove in questo capitolo, come la scelta tra campionamento e forza bruta e il numero di worker (\cref{sec:impl-sampling,sec:impl-execution}), o i flag \texttt{offline\_history}, \texttt{include\_value\_spans}, \texttt{skip\_navigation\_in\_prompt} (\cref{sec:impl-config}).
+\end{itemize}
 
-Nella prima versione dello strumento, \texttt{TIERS} e \texttt{SECOND\_TIERS}
-erano gli unici due punti di ingresso possibili: due liste Python scritte a
-mano direttamente nel codice sorgente, senza alcuna interfaccia per
-modificarle o per provarne una terza. L'unico strumento interattivo
-disponibile permetteva di esplorare una singola entità alla volta con degli
-slider, senza alcun collegamento con il concetto di tier: i valori numerici
-delle due liste erano stati determinati esplorando le entità una per una con
-questo strumento, per poi essere trascritti a mano nei due elenchi fissi:
-un processo non documentato né riproducibile automaticamente.
+Gli estremi dei quattro slider di configurazione non sono fissi, ma vengono
+calcolati al volo scoprendo, tramite \texttt{discover\_routes\_from\_map}
+(\cref{sec:impl-routes}), quante route siano effettivamente raggiungibili
+da quell'entità con i limiti scelti.
+
+%\begin{figure}[H]
+%\centering
+%    \includegraphics[width=.75\linewidth]{figures/manual-generation-mockup.pdf}
+%    \caption{Mockup semplificato del pannello di generazione manuale:
+%        selezione dell'entità, i quattro slider di configurazione, e il
+%        riscontro immediato sulle route effettivamente scoperte. Non sono
+%        raffigurate le sezioni \emph{Generation Mode} e \emph{History
+%            building}, i cui parametri sono già discussi altrove in questo
+%        capitolo.}
+%    \label{fig:manual-mockup}
+%\end{figure}
+
+Questa modalità non è pensata per costruire un dataset completo, ma per
+esplorare e calibrare. Al termine della generazione infatti, il pannello non si
+limita a riportare un conteggio finale, ma mostra due schede separate: una con i
+record effettivamente creati, in un'anteprima tabellare di prompt e query, e una
+con quelli scartati, raggruppati per motivo di scarto esatto, tra cui i tre già
+discussi in \cref{sec:impl-output} (filtri non atterrati nella query, query
+sintatticamente non valida, duplicato), con la possibilità di filtrare e
+ispezionare i singoli tentativi falliti per una singola categoria. È proprio
+questo riscontro dettagliato a rendere la modalità manuale utile a decidere
+quali parametri applicare a un tier con decine di entità e tempi di generazione
+elevati, dove un errore nei parametri rischierebbe di sprecare risorse di
+calcolo e prolungare inutilmente i tempi di attesa.
 
 \subsection{Configurazione dei tier da file esterno}
 \label{sec:impl-tier-config}
 
-Per superare questa limitazione, il generatore accetta ora una configurazione
-di tier alternativa, fornita come file JSON esterno invece che scritta nel
-codice sorgente. La struttura richiesta è la stessa dei due elenchi
-predefiniti (\cref{lst:tier-validate}): un insieme fisso di chiavi
-obbligatorie per ciascun gruppo, controllate prima di avviare qualunque
-generazione.
+Ripetere la procedura manuale appena descritta per ciascuna delle 45
+entità dello schema, una alla volta, sarebbe impraticabile, e non
+lascerebbe alcuna traccia dichiarata e riproducibile delle scelte fatte.
+Il generatore risolve questo problema raggruppando più entità sotto uno
+stesso insieme di parametri condivisi, un \emph{tier}: per ciascun tier
+configurato, per ciascuna entità elencata al suo interno, viene eseguito
+lo stesso motore di generazione già descritto nelle sottosezioni
+precedenti, con i parametri propri di quel tier
+(\texttt{min\_relations}, \texttt{max\_relations},
+\texttt{min\_properties}, \texttt{max\_properties}, \texttt{min\_paths},
+\texttt{max\_paths}, \texttt{min\_values}, \texttt{max\_values}) e un
+numero massimo di record da generare per quell'entità
+(\texttt{sample\_size\_per\_entity}). I record delle singole entità
+confluiscono infine in un unico file (\cref{sec:impl-split}).
+
+Per generare il dataset di questa tesi sono state scritte due
+configurazioni di tier di questo tipo, \texttt{TIERS} e
+\texttt{SECOND\_TIERS}, create appositamente per questa generazione e non
+pensate come uno standard riutilizzabile del sistema: al momento in cui
+sono state scritte, erano liste Python definite direttamente nel codice
+sorgente, non file esterni. Le due liste raggruppano lo stesso insieme di
+45 entità secondo criteri diversi, applicati in due passate di generazione
+separate. \texttt{TIERS} raggruppa le entità per distanza dal nodo
+\texttt{Patient} nel grafo (i sei livelli discussi in
+\cref{chap:progettazione}); \texttt{SECOND\_TIERS} raggruppa le stesse
+entità per tema clinico (\emph{demographics}, \emph{diagnosis\_staging},
+\emph{treatment}, \emph{measurements\_labs}, \emph{symptoms},
+\emph{services}). Il commento nel codice sorgente motiva esplicitamente
+questa scelta: raggruppamenti diversi fanno finire entità diverse nella
+stessa query multi-relazione, quindi anche un'entità già coperta nella
+prima passata compare, nella seconda, in combinazioni differenti,
+ottenendo varietà genuina invece di ricampionare gli stessi pattern di
+co-occorrenza già visti. Le due configurazioni differiscono anche nei
+parametri di generazione: mentre in \texttt{TIERS} il numero di proprietà
+vincolate per record varia entro un intervallo (tipicamente 1--3), in
+\texttt{SECOND\_TIERS} ogni gruppo impone \texttt{min\_properties} e
+\texttt{max\_properties} uguali tra loro (sempre 4), producendo record
+strutturalmente più complessi e uniformi rispetto alla prima passata.
+
+Definire una terza configurazione, o modificare le due esistenti,
+richiedeva a quel tempo di editare direttamente il codice sorgente, senza
+alcuna verifica automatica prima di avviare la generazione: un errore di
+battitura o un valore incoerente si scopriva solo a generazione già
+avviata, magari dopo ore di chiamate all'API. Per superare questo limite,
+il generatore accetta oggi anche una configurazione di tier fornita come
+file JSON esterno, controllata prima di avviare qualunque generazione,
+senza dover toccare il codice sorgente per definirla o modificarla.
 
 \begin{lstlisting}[language=Python, caption={Validazione di una configurazione di tier caricata da file esterno, prima di avviare la generazione.}, label={lst:tier-validate}]
 REQUIRED_TIER_KEYS = {
@@ -1281,26 +1340,26 @@ def validate_tier_config(tiers) -> None:
         # ... same check repeated for paths, properties and values
 \end{lstlisting}
 
-Oltre alla presenza di tutte le chiavi richieste, la funzione verifica che
-ogni intervallo dichiarato sia coerente (nessun \texttt{min} maggiore del
+La funzione di validazione (\cref{lst:tier-validate}) controlla non solo
+che ogni gruppo contenga tutte le chiavi richieste, ma anche che ogni
+intervallo dichiarato sia coerente (nessun \texttt{min} maggiore del
 corrispondente \texttt{max}) e che non vi siano due gruppi con lo stesso
 nome, restituendo un messaggio d'errore specifico invece di un'eccezione
-generica non gestita. La funzione \texttt{run\_all}
-(\cref{sec:impl-execution}) accetta ora un parametro \texttt{tiers}
-opzionale, che sostituisce \texttt{SECOND\_TIERS} quando fornito esplicitamente,
-mantenendo però quest'ultimo come valore di default per non alterare il
-comportamento da riga di comando già in uso.
+generica non gestita: un file scritto male viene quindi respinto subito,
+con un motivo preciso, invece di fallire a metà generazione. La funzione
+\texttt{run\_all} (\cref{sec:impl-execution}) accetta un parametro
+\texttt{tiers} opzionale per ricevere questa configurazione esterna al
+posto di quella predefinita.
 
 Questa configurazione esterna è esposta, sul lato dell'interfaccia
 Streamlit, tramite un pannello dedicato che permette di caricare il file,
-ne mostra a schermo un riepilogo (numero di gruppi ed entità coinvolte) prima
-di abilitare il pulsante di avvio, e traduce l'avanzamento della generazione
-in una barra di progresso calcolata sul numero di entità completate rispetto
-al totale, invece del solo log testuale disponibile in precedenza. L'output
-finale non viene più scritto in un percorso scelto dall'utente: viene reso
-disponibile direttamente come file scaricabile al termine del processo,
-eliminando la necessità di un qualunque accesso al filesystem del server per
-chi utilizza lo strumento.
+ne mostra a schermo un riepilogo (numero di gruppi ed entità coinvolte)
+prima di abilitare il pulsante di avvio, e traduce l'avanzamento della
+generazione in una barra di progresso calcolata sul numero di entità
+completate rispetto al totale. L'output finale non viene scritto in un
+percorso scelto dall'utente: viene reso disponibile direttamente come file
+scaricabile al termine del processo, eliminando la necessità di un
+qualunque accesso al filesystem del server per chi utilizza lo strumento.
 
 \subsection{Split del dataset}
 \label{sec:impl-split}
@@ -1454,7 +1513,7 @@ inglese (il carattere NUL), impedendo che un intervallo venga spezzato a metà
 tra due chunk diversi. Ogni record con un numero di valori pari o inferiore
 alla soglia produce un solo chunk, e non attraversa quindi alcuna
 suddivisione: nel dataset supplementare da 1331 record generato con vincolo
-fisso a 4 proprietà per record (\cref{sec:impl-tiers}), l'80,6\% dei record
+fisso a 4 proprietà per record (\cref{sec:impl-tier-config}), l'80,6\% dei record
 (1073 su 1331) è rimasto in un solo chunk, mentre il restante 19,4\% (258
 record) è stato diviso in due; nessun record ha richiesto più di due chunk,
 nemmeno quello con più valori in assoluto (20 valori, divisi in due chunk da
