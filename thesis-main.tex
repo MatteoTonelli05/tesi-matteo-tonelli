@@ -38,9 +38,38 @@ su knowledge graph clinico-oncologico}
 \frontmatter\frontispiece
 
 \begin{abstract}
-    % TODO: abstract vero, max 2000 caratteri (limite rigido del template).
-    % Scrivilo per ultimo, quando il resto e' stabile -- vedi
-    % mappa_contenuti_tesi.md.
+    Il Cancer Virtual Lab (CVL) raccoglie i dati clinici oncologici
+    dell'IRST "Dino Amadori" in un knowledge graph interrogabile tramite
+    SPARQL, un linguaggio formale che il personale clinico non possiede
+    tipicamente. Un'interfaccia in linguaggio naturale ridurrebbe questa
+    barriera, ma richiede un modello linguistico addestrato specificamente
+    sull'ontologia di CVL, e un dataset di addestramento per questo
+    compito non esiste.
+
+    Questo lavoro progetta e implementa una pipeline automatica in due
+    stadi per costruire un simile dataset. Il primo stadio genera coppie
+    di prompt e query SPARQL esplorando sistematicamente lo schema del
+    knowledge graph e campionando combinazioni di vincoli sintatticamente
+    corrette, coprendo quarantacinque entità organizzate in gruppi
+    configurabili. Il secondo stadio arricchisce ciascuna coppia con
+    formulazioni linguistiche alternative in dieci registri stilistici
+    distinti, aumentando la varietà del dataset senza alterarne la
+    correttezza semantica.
+
+    La pipeline ha prodotto un dataset di quattordicimilaventuno esempi,
+    verificato privo di sovrapposizioni tra gli insiemi di addestramento,
+    validazione e test. Un modello Gemma 270M, addestrato tramite LoRA su
+    questo dataset, ha raggiunto un exact match del 46\% su un insieme di
+    test in stile coerente con l'addestramento, un risultato ottenuto
+    scegliendo il checkpoint in base alla validation loss anziché
+    all'ultima iterazione, e superiore al 18\% raggiunto da un confronto
+    con il full fine-tuning. L'analisi degli errori residui non ha
+    rilevato alcuna query sintatticamente non valida, mostrando che il
+    modello concentra le proprie difficoltà nella discriminazione tra
+    entità simili piuttosto che in un comportamento arbitrario. Il lavoro
+    individua infine cinque problemi di qualità nel dataset, due dei
+    quali già corretti, proponendo una via di risoluzione per i
+    restanti.
 \end{abstract}
 
 
@@ -58,7 +87,57 @@ su knowledge graph clinico-oncologico}
 \chapter{Introduzione}
 \label{chap:introduction}
 
-\paragraph{Structure of the Thesis}
+Il Cancer Virtual Lab (CVL) è una piattaforma che raccoglie i dati clinici
+oncologici dell'IRST "Dino Amadori" in un knowledge graph interrogabile
+tramite SPARQL, il linguaggio di interrogazione standard per i dati
+strutturati secondo il modello RDF (\cref{chap:background}). SPARQL è un
+linguaggio formale, e la sua sintassi richiede una competenza tecnica che
+il personale clinico e i ricercatori del dominio oncologico non possiedono
+tipicamente, creando una barriera tra la ricchezza dei dati disponibili e
+la possibilità concreta di interrogarli senza il supporto di uno
+specialista informatico. Un'interfaccia in linguaggio naturale capace di
+tradurre una domanda posta in italiano o in inglese nella query SPARQL
+corrispondente ridurrebbe questa barriera, ma richiede un modello
+linguistico specificamente addestrato a questo compito: un modello
+generico, per quanto capace su compiti generali, non conosce la struttura
+specifica dell'ontologia di CVL, i nomi delle sue classi e proprietà, né le
+convenzioni con cui le query sono tipicamente costruite in questo contesto.
+
+Addestrare un simile modello richiede a sua volta un dataset di
+addestramento composto da coppie di domande in linguaggio naturale e
+query SPARQL corrispondenti, specifiche per l'ontologia di CVL. Un dataset
+di questo tipo non esiste in partenza, e costruirlo manualmente, coppia
+per coppia, non è una strada praticabile alla scala necessaria per un
+addestramento efficace. Questo lavoro affronta questo problema
+progettando e implementando una pipeline automatica in grado di generare
+un simile dataset, e ne verifica l'efficacia addestrando concretamente un
+modello linguistico sui dati prodotti.
+
+La pipeline sviluppata si articola in due stadi. Il primo genera in modo
+strutturato coppie di prompt e query SPARQL valide, esplorando
+sistematicamente lo schema del knowledge graph e campionando combinazioni
+di vincoli sintatticamente corrette. Il secondo arricchisce ciascuna
+coppia con più formulazioni linguistiche alternative della stessa
+domanda, aumentando la varietà stilistica del dataset senza alterarne la
+correttezza semantica. Il modello linguistico risultante dal fine-tuning
+su questo dataset è stato infine valutato sperimentalmente, confrontando
+diverse configurazioni di addestramento e analizzando la natura degli
+errori residui.
+
+\section*{Struttura della tesi}
+
+Il \cref{chap:background} introduce il contesto tecnico necessario a
+seguire il resto del lavoro: la piattaforma CVL, i concetti di knowledge
+graph, RDF e SPARQL, i lavori correlati sulla generazione di dataset
+text-to-SPARQL, e le tecniche di fine-tuning di modelli linguistici
+impiegate più avanti. Il \cref{chap:analisi} definisce gli obiettivi, i
+vincoli e i requisiti del sistema. Il \cref{chap:progettazione} descrive le
+decisioni progettuali alla base sia del generatore sia dello stadio di
+augmentation. Il \cref{chap:implementation} ne documenta l'implementazione
+concreta. Il \cref{chap:evaluation} riporta i risultati sperimentali,
+sia sul dataset prodotto sia sul modello linguistico addestrato a partire
+da esso. Il \cref{chap:conclusion} chiude il lavoro con una sintesi dei
+risultati ottenuti e le direzioni di sviluppo future.
 
 \chapter{Background}
 \label{chap:background}
@@ -224,6 +303,7 @@ il Full Fine-Tuning impraticabile su hardware di classe consumer o con
 risorse di calcolo limitate.
 
 \subsection{Tecniche di adattamento efficiente (PEFT, LoRA e QLoRA)}
+\label{sec:peft-lora}
 Per ovviare a questo limite, sono state introdotte le tecniche di
 \textit{Parameter-Efficient Fine-Tuning} (PEFT), che aggiornano solo una
 piccola porzione dei parametri del modello, o ne introducono di nuovi in
@@ -1945,9 +2025,457 @@ valore reale durante la riformulazione.
 \chapter{Valutazione}
 \label{chap:evaluation}
 
+\section{Testing}
+\label{sec:eval-testing}
+
+Questa sezione riporta i problemi di qualità individuati nel dataset durante lo
+sviluppo, un confronto sperimentale tra due modalità di generazione, e le
+statistiche finali dei tre insiemi prodotti.
+
+\subsubsection{Problemi di qualità riscontrati}
+\label{sec:eval-quality-issues}
+
+Nel corso dello sviluppo sono stati individuati cinque problemi di qualità
+veri e propri, ciascuno diagnosticato fino alla causa tecnica sottostante
+(\cref{fig:quality-issues}). Una proposta di risoluzione per ciascuno di
+essi è discussa in \cref{chap:conclusion}. Due ulteriori comportamenti,
+inizialmente considerati problematici, sono stati in seguito riconosciuti
+come accettabili o addirittura desiderabili, e sono discussi separatamente
+al termine di questa sezione.
+
+\label{prob:ecog}
+Un primo problema, isolato, ha riguardato la confusione tra l'acronimo
+clinico ECOG, relativo a una scala di stato funzionale oncologico, e il
+termine ecocardiogramma, un esame diagnostico distinto; il modello
+linguistico locale impiegato per la generazione dei sinonimi ha in
+un'occasione sostituito il primo con una forma testuale riconducibile al
+secondo. La causa è riconducibile ai limiti di conoscenza specifica del
+modello linguistico di dimensioni contenute impiegato per questo compito,
+che non dispone di una base affidabile di terminologia clinica e tende a
+produrre un'associazione plausibile in base alla sola somiglianza
+superficiale tra i due termini, piuttosto che riconoscere di non avere
+l'informazione necessaria.
+
+\label{prob:icd10}
+Un secondo problema, quantitativamente più rilevante e riconducibile alla
+medesima causa di fondo, ha riguardato l'allucinazione di codici di
+classificazione ICD-10. Il filtro di sicurezza del sistema di sinonimi,
+nella sua versione iniziale, escludeva dal tentativo di generazione del
+sinonimo i valori corrispondenti al pattern di un codice, riconosciuto
+tramite un prefisso testuale seguito dal carattere due punti; tale
+riconoscimento, tuttavia, era limitato a prefissi composti interamente da
+lettere, ed escludeva correttamente prefissi quali quello della
+nomenclatura SNOMED, ma non il prefisso della classificazione ICD-10, che
+contiene anche cifre. Come conseguenza, un medesimo codice ICD-10 è stato
+tradotto, in varianti diverse dello stesso record, in nomi di patologie non
+corrispondenti al codice originale e reciprocamente incoerenti tra loro,
+confermando che il modello linguistico non disponeva di una conoscenza
+affidabile della corrispondenza tra codice e patologia, ma produceva
+un'associazione plausibile priva di fondamento verificabile, lo stesso
+limite già osservato nel primo problema. Il problema ha interessato
+quarantasette record del dataset; il difetto specifico nel filtro di
+riconoscimento del pattern, che escludeva solo i prefissi alfabetici, è
+stato corretto.
+
+Un terzo problema, riscontrato nella prima fase del lavoro di generazione
+manuale delle varianti per gli insiemi di validazione e di test, ha
+riguardato la produzione di testo non conforme a un registro di linguaggio
+naturale, quale la riproduzione di sintassi propria di un linguaggio di
+interrogazione strutturato, elenchi nella forma campo seguito da valore, e
+parentesi impiegate come dispositivo strutturale anziché come parte di un
+valore letterale originale. A differenza dei primi due problemi, la causa
+qui non è un limite del modello linguistico, ma la scrittura manuale dei
+modelli di frase impiegati in questa fase, che in alcuni casi rispecchiava
+abitudini di formulazione più vicine a un'interfaccia tecnica che al
+linguaggio naturale. Il problema è stato individuato tramite lettura
+diretta del testo prodotto e corretto riscrivendo i modelli di frase
+coinvolti.
+
+Un quarto problema ha riguardato la concatenazione di due valori data
+adiacenti in un intervallo temporale, priva di un separatore testuale
+intermedio, risultante in una sequenza di cifre e trattini non
+interpretabile senza ambiguità da un lettore umano, poiché le date stesse
+contengono trattini come parte della propria formattazione. La causa è di
+natura puramente implementativa, non riconducibile ad alcun modello
+linguistico: il modello di frase impiegato per costruire il testo non
+prevedeva l'inserimento di una congiunzione quando due valori data si
+trovavano ad essere affiancati direttamente. Il problema, riscontrato in
+cinquantacinque occorrenze, è stato corretto inserendo sistematicamente
+una congiunzione testuale in tutti i punti in cui ciò si verificava.
+
+\label{prob:nan}
+Un quinto problema, distinto dai precedenti poiché non riconducibile a un
+difetto del sistema di generazione delle varianti, ha riguardato la
+presenza del valore letterale "nan" come unità di misura in un numero
+limitato di record, riscontrato in sette casi. Questo valore, tipico di
+una rappresentazione di dato mancante non gestita a monte, è stato
+preservato correttamente dal sistema di augmentation, che per costruzione
+non altera i valori letterali originali; la causa è quindi da ricondurre
+alla fase di generazione del dataset strutturato, non alla fase di
+augmentation linguistica.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.85\linewidth]{figures/quality-issues.pdf}
+    \caption{Occorrenze riscontrate per ciascuno dei quattro problemi di
+        qualità quantificabili (il terzo problema, individuato tramite
+        lettura diretta anziché conteggio sistematico, non compare in
+        figura).}
+    \label{fig:quality-issues}
+\end{figure}
+
+Due ulteriori comportamenti, inizialmente registrati come problemi durante
+lo sviluppo, meritano una lettura diversa. Il primo riguarda l'uso
+occasionale di una preposizione non canonica, "at" al posto di "on", in
+combinazione con valori riferiti a una linea di trattamento terapeutico,
+riscontrato in otto casi. Più che un difetto da correggere, questo
+comportamento può essere considerato una forma di variazione naturale
+del linguaggio: un parlante reale non segue sempre con precisione le
+regole grammaticali, e una minima imprecisione di questo tipo può
+contribuire alla varietà stilistica del testo generato piuttosto che
+comprometterne la qualità.
+
+Il secondo riguarda la presenza, in alcuni record, di due vincoli distinti
+sulla medesima proprietà scalare del paziente, quale la data di decesso,
+con valori incompatibili tra loro, risultante in una query logicamente
+priva di risultati possibili. Il fenomeno, ricondotto a una collisione tra
+due percorsi relazionali paralleli campionati indipendentemente durante
+la generazione, è risultato più frequente nel secondo passaggio di
+generazione, con duecentonovantacinque record su milletrecentotrentuno
+esaminati in quella fase. Piuttosto che un difetto da correggere, questo
+comportamento riflette una condizione che si presenta anche nell'uso
+reale di un sistema di interrogazione: un utente può porre, per errore o
+per verifica, una domanda a cui nessun dato può corrispondere. Includere
+alcuni esempi di questo tipo nel dataset non compromette la qualità
+dell'addestramento, e i record interessati sono comunque stati esclusi
+dal dataset finale per mantenere la maggioranza dei casi orientata a
+query con una risposta effettiva.
+
+\subsubsection{Confronto tra generazione con e senza mascheramento}
+\label{sec:eval-masking-comparison}
+
+Al fine di verificare se l'assenza di mascheramento dei valori producesse
+una struttura linguistica delle varianti generate qualitativamente diversa
+rispetto alla modalità principale, è stato condotto un confronto
+sperimentale su un insieme di venti record di input, selezionati per
+rappresentare una gamma di complessità crescente, dal caso di un singolo
+valore vincolato fino al caso di dodici valori vincolati nella medesima
+query. Le due modalità sono state eseguite sul medesimo insieme di record,
+con i medesimi parametri di generazione.
+
+Il numero complessivo di slot di generazione tentati è risultato identico
+tra le due modalità, sessantasei, poiché determinato dalla medesima formula
+adattiva basata sul numero di valori per record, indipendente dalla
+modalità di mascheramento. Il tasso di successo complessivo è risultato
+lievemente superiore nella modalità con mascheramento, novantotto virgola
+cinque percento contro novantasette percento nella modalità senza
+mascheramento. La causa dei fallimenti si è rivelata inoltre di natura
+diversa tra le due modalità: nella modalità senza mascheramento, i
+fallimenti osservati sul medesimo record sono stati causati da una
+corrispondenza testuale identica al cento percento tra tentativi di
+generazione distinti, condizione non osservata nella modalità con
+mascheramento, dove il fallimento osservato ha mostrato una corrispondenza
+testuale parziale, inferiore al novanta percento.
+
+Questo risultato suggerisce che l'assenza di segnaposti opachi, pur non
+compromettendo in modo sostanziale il tasso di successo complessivo, può
+ridurre la capacità del modello linguistico di produrre formulazioni
+distinte quando il testo con i valori visibili offre un numero limitato di
+modi naturali per esprimere la medesima richiesta.
+
+\subsubsection{Statistiche del dataset}
+\label{sec:eval-dataset-stats}
+
+Il dataset finale risulta suddiviso in tre insiemi distinti, destinati
+rispettivamente all'addestramento, alla validazione, e al test del modello.
+L'insieme di addestramento comprende 9\,976 varianti, prodotte a partire da
+3\,443 record sorgente distinti, con una media di 2,90 varianti per record.
+Gli insiemi di validazione e di test comprendono rispettivamente 2\,022 e
+2\,023 varianti, prodotte a partire da 428 record sorgente distinti
+ciascuno, con una media di 4,72 e 4,73 varianti per record, contro un
+obiettivo fisso di cinque varianti per record non sempre raggiunto per
+intero. Nessun record sorgente risulta condiviso tra i tre insiemi: la
+verifica sull'insieme dei relativi identificativi conferma una separazione
+completa, coerente con l'obiettivo di una valutazione di reale
+generalizzazione anziché di semplice memorizzazione.
+
+La distribuzione delle varianti tra i dieci registri stilistici nell'insieme
+di addestramento risulta ragionevolmente uniforme, pur non perfettamente
+bilanciata (\cref{fig:style-distribution}): lo stile più rappresentato,
+\emph{technical\_sql}, compare in 1\,237 varianti, contro le 569 dello stile
+meno rappresentato, \emph{generational}, un rapporto di circa 2,2 a 1 tra
+il più e il meno frequente.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.85\linewidth]{figures/style-distribution.pdf}
+    \caption{Distribuzione delle varianti tra i dieci stili linguistici,
+        nell'insieme di addestramento.}
+    \label{fig:style-distribution}
+\end{figure}
+
+Una differenza rilevante nella densità di parafrasi si osserva tra
+l'insieme di addestramento, prodotto tramite la formula adattiva basata sul
+numero di valori per record, e gli insiemi di validazione e di test,
+prodotti con un numero fisso di varianti per record: il primo presenta una
+media sensibilmente più bassa (2,90 contro le circa 4,7 degli altri due
+insiemi), una scelta deliberata per contenere il volume complessivo di
+addestramento senza sacrificare la varietà stilistica degli insiemi usati
+per la misurazione delle prestazioni.
+
+Infine, la quota di varianti non riformulate rispetto al testo originale
+(\emph{fallback}) risulta contenuta in tutti e tre gli insiemi: 0,58\% nel
+train (58 varianti su 9\,976), 0,35\% sia in validation sia in test (7
+varianti ciascuno).
+
+\section{Experimental evaluation / demos}
+\label{sec:eval-experimental}
+
+Questa sezione riporta i risultati sperimentali del fine-tuning del modello
+linguistico sul dataset descritto nella sezione precedente, confrontando
+diverse configurazioni e analizzando la natura degli errori residui.
+
+\subsubsection{Metodologia}
+
+Il modello impiegato è Gemma 3 270M, adattato tramite LoRA
+(\cref{sec:peft-lora}) su un insieme di addestramento coerente con quello
+descritto in \cref{sec:eval-dataset-stats}. La metrica principale è
+l'\emph{exact match}, la percentuale di query generate identiche carattere
+per carattere alla query di riferimento, calcolata su un insieme di test di
+cento esempi in stile coerente con l'insieme di addestramento
+(\emph{trainstyle-test}); dove indicato, i risultati sono riportati anche
+su un secondo insieme di cento esempi fuori distribuzione
+(\emph{claude-test}), formulato da un modello linguistico diverso da
+quello impiegato nella generazione del dataset stesso, per verificare la
+capacità di generalizzazione a formulazioni non viste in addestramento.
+
+\subsubsection{Selezione del checkpoint}
+
+Un primo addestramento di riferimento, condotto per 4\,000 iterazioni, è
+stato seguito da un secondo addestramento più lungo, di 15\,000
+iterazioni. Anziché impiegare il checkpoint dell'ultima iterazione di
+quest'ultimo, la scelta è ricaduta sul checkpoint con la
+\emph{validation loss} più bassa osservata durante l'addestramento, in
+corrispondenza dell'iterazione 7\,000 (\cref{fig:loss-curve}). Questa
+scelta metodologica si è rivelata determinante, portando l'exact match
+dal 15\% del checkpoint finale (iterazione 15\,000) al 46\% del
+checkpoint scelto, sullo stesso modello e sugli stessi dati di
+addestramento.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.85\linewidth]{figures/loss-curve.pdf}
+    \caption{Andamento della train e della validation loss durante
+        l'addestramento di 15\,000 iterazioni. Il checkpoint scelto per la
+        valutazione finale, in corrispondenza del minimo della validation
+        loss, è evidenziato dalla linea tratteggiata.}
+    \label{fig:loss-curve}
+\end{figure}
+
+\subsubsection{Confronto tra configurazioni}
+
+Il checkpoint scelto (iterazione 7\,000) raggiunge un exact match del
+\textbf{46\%} sull'insieme di test in stile coerente con l'addestramento,
+un risultato solido per un modello di 270 milioni di parametri, addestrato
+con una tecnica efficiente come LoRA, su un compito che richiede di
+produrre query sintatticamente corrette e semanticamente vincolate a
+un'ontologia clinica reale (\cref{fig:finetuning-comparison}). Il primo
+addestramento, più breve, aveva raggiunto solo il 13\% nella stessa
+condizione, confermando che l'esposizione prolungata ai dati, unita a una
+selezione accurata del checkpoint, produce un miglioramento sostanziale e
+non marginale. Un confronto diretto con il full fine-tuning, condotto
+sullo stesso modello di base per 6\,000 iterazioni, mostra un exact match
+del 18\% nella medesima condizione, sensibilmente inferiore al risultato
+ottenuto con LoRA a parità di ordine di grandezza di iterazioni.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.85\linewidth]{figures/finetuning-comparison.pdf}
+    \caption{Confronto dell'exact match tra le configurazioni testate, sia
+        sull'insieme di test in stile coerente con l'addestramento sia,
+        dove disponibile, sull'insieme fuori distribuzione.}
+    \label{fig:finetuning-comparison}
+\end{figure}
+
+Sull'insieme di test fuori distribuzione, i risultati sono naturalmente
+più contenuti (4\% per il primo addestramento, 7\% per il checkpoint
+finale del secondo), un calo atteso trattandosi di formulazioni mai
+osservate durante l'addestramento e generate da un modello linguistico
+diverso da quello usato per produrre il dataset. Il checkpoint scelto
+(iterazione 7\,000) non è stato valutato su questo insieme, essendo stato
+individuato successivamente come il più promettente sulla base della sola
+validation loss.
+
+\subsubsection{Analisi degli errori}
+
+Le cinquantaquattro righe non corrispondenti esattamente al checkpoint
+scelto sono state analizzate confrontando in modo automatico la struttura
+e i valori di ciascuna query generata con quella di riferimento
+(\cref{fig:error-taxonomy}). Nella maggioranza dei casi, il 63\%, la query
+generata utilizza un predicato, una classe, o un percorso relazionale
+diverso da quello corretto, tipicamente confondendo entità ontologiche
+simili tra loro (ad esempio \texttt{Patient} con una sua sottoclasse come
+\texttt{DrinkerPatient}, introdotta nella query senza che il prompt la
+richiedesse). Nel 24\% dei casi la struttura della query è corretta, ma
+uno dei valori letterali richiesti differisce da quello atteso. Nel
+restante 13\% dei casi, la query è strutturalmente corretta e utilizza il
+predicato giusto, ma restituisce un identificativo o un codice errato al
+posto di quello corretto, ad esempio confondendo due codici della
+classificazione ICD-10 entrambi plausibili nel contesto ma diversi da
+quello richiesto.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.75\linewidth]{figures/error-taxonomy.pdf}
+    \caption{Distribuzione delle cinquantaquattro righe non corrispondenti
+        per categoria di errore, sul checkpoint scelto (iterazione 7\,000).}
+    \label{fig:error-taxonomy}
+\end{figure}
+
+È significativo che, in nessuno dei casi analizzati, il modello abbia
+prodotto una query non sintatticamente valida o strutturalmente
+incoerente. Anche negli errori, il modello dimostra di aver appreso in
+modo affidabile la grammatica del linguaggio di interrogazione e la
+struttura generale delle query attese, concentrando le proprie difficoltà
+in un numero limitato di pattern riconoscibili e riconducibili a una causa
+comune, la discriminazione tra entità o valori simili tra loro, più che a
+un comportamento arbitrario o imprevedibile.
 
 \chapter{Conclusioni e sviluppi futuri}
 \label{chap:conclusion}
+
+Questo lavoro ha affrontato il problema della mancanza di un dataset di
+addestramento per un modello linguistico capace di tradurre domande in
+linguaggio naturale in query SPARQL sul knowledge graph del Cancer Virtual
+Lab, progettando e implementando una pipeline automatica in due stadi
+per costruirlo, e verificandone l'efficacia tramite il fine-tuning
+concreto di un modello linguistico sui dati prodotti.
+
+I quattro obiettivi specifici definiti in \cref{chap:analisi} possono
+essere considerati raggiunti. La \hyperref[obj:O1]{copertura selettiva ed
+    estendibilità} (\textbf{O1}) è stata ottenuta tramite il meccanismo dei
+tier, che copre quarantacinque entità dello schema senza richiederne la
+copertura completa, ed è estendibile a nuove classi tramite una
+configurazione esterna che non richiede di modificare il codice del
+generatore (\cref{sec:impl-tier-config}). La \hyperref[obj:O2]{varietà
+    linguistica autentica} (\textbf{O2}) è stata perseguita tramite lo stadio
+di augmentation, che produce dieci registri stilistici distinti a partire
+da ciascuna coppia generata, con un tasso di successo superiore al 97\%
+anche nella modalità più restrittiva testata (\cref{sec:eval-masking-comparison}).
+La \hyperref[obj:O3]{tracciabilità completa} (\textbf{O3}) è garantita
+dall'identificativo di provenienza mantenuto per ogni variante, verificato
+non presentare alcuna sovrapposizione tra gli insiemi di addestramento,
+validazione e test (\cref{sec:eval-dataset-stats}). Il
+\hyperref[obj:O4]{volume di dati adeguato al fine-tuning} (\textbf{O4}) è
+confermato non solo dal numero complessivo di quattordicimilaventuno
+varianti prodotte, ma soprattutto dal fatto che il dataset si sia
+dimostrato concretamente utilizzabile per addestrare un modello con
+risultati misurabili, come riportato di seguito.
+
+La valutazione sperimentale del modello ottenuto tramite fine-tuning ha
+prodotto un risultato solido, un exact match del 46\% su un insieme di
+test in stile coerente con l'addestramento, ottenuto con LoRA su un
+modello di soli 270 milioni di parametri (\cref{sec:eval-experimental}).
+Due risultati metodologici emersi durante la valutazione meritano di
+essere sottolineati. Il primo è che la scelta del checkpoint in base alla
+validation loss, piuttosto che all'ultima iterazione disponibile, ha
+prodotto un miglioramento determinante, dal 15\% al 46\% di exact match a
+parità di modello e di dati. Il secondo è che, a parità di ordine di
+grandezza di iterazioni, LoRA ha superato nettamente il full fine-tuning
+condotto come confronto (46\% contro 18\%). L'analisi degli errori residui
+ha inoltre mostrato che nessuno di essi consiste in una query
+sintatticamente non valida: il modello ha appreso in modo affidabile la
+grammatica del linguaggio di interrogazione, concentrando le proprie
+difficoltà nella discriminazione tra entità o valori simili tra loro,
+piuttosto che in un comportamento arbitrario.
+
+Il processo di sviluppo ha inoltre permesso di individuare e diagnosticare
+cinque problemi di qualità genuini nel dataset generato
+(\cref{sec:eval-quality-issues}), riconducendo ciascuno alla propria causa
+tecnica; due di essi sono già stati corretti nell'ambito di questo lavoro,
+mentre per i restanti tre è proposta una via di correzione nella sezione
+seguente. Due ulteriori comportamenti, inizialmente considerati
+problematici, sono stati infine riconosciuti come accettabili, un
+risultato che riflette una comprensione più matura, maturata nel corso del
+lavoro, di cosa costituisca realmente un difetto in un dataset di questo
+tipo rispetto a una variazione legittima.
+
+\section{Sviluppi futuri}
+\label{sec:future-work}
+
+\subsection{Risoluzione dei problemi di qualità}
+\label{sec:future-quality-fixes}
+
+Alcuni dei problemi di qualità discussi in \cref{sec:eval-quality-issues}
+non hanno ricevuto, nell'ambito di questo lavoro, una correzione alla
+radice, e rappresentano quindi possibili direzioni di sviluppo futuro.
+
+\textbf{Confusione tra acronimi clinici simili}
+(\cref{sec:eval-quality-issues}, p.~\pageref{prob:ecog}). Una possibile correzione consisterebbe nel
+restringere la generazione di sinonimi per questa categoria di valori a
+un dizionario curato di equivalenze verificate, invece di affidarsi alla
+generazione libera del modello linguistico locale, che non dispone di una
+base affidabile di terminologia clinica.
+
+\textbf{Allucinazione di codici ICD-10}
+(\cref{sec:eval-quality-issues}, p.~\pageref{prob:icd10}). Il difetto specifico nel filtro di riconoscimento è
+già stato corretto, ma una correzione più robusta consisterebbe
+nell'escludere del tutto dalla generazione libera qualunque valore
+riconducibile a un sistema di codifica controllato, sostituendola con una
+verifica rispetto alla tabella dei codici validi prima di accettare
+qualunque sostituzione proposta, così da eliminare il rischio alla radice
+invece di limitarsi a riconoscere meglio i pattern da escludere.
+
+\textbf{Valore letterale "nan" come unità di misura}
+(\cref{sec:eval-quality-issues}, p.~\pageref{prob:nan}). Una correzione consisterebbe nel riconoscere
+esplicitamente questo tipo di valore mancante durante la generazione del
+dataset strutturato, escludendo il record interessato o rappresentando
+l'assenza del dato in modo esplicito, invece di lasciare che un
+segnaposto tecnico non gestito raggiunga il testo finale.
+
+\subsection{Altre direzioni di sviluppo}
+\label{sec:future-other}
+
+Oltre alla risoluzione dei problemi di qualità appena discussi, il lavoro
+suggerisce alcune direzioni di sviluppo più ampie, emerse dai limiti
+riscontrati nel corso della valutazione più che da difetti puntuali.
+
+\textbf{Estensione della copertura dello schema}. Il dataset attuale
+copre quarantacinque entità dello schema (\hyperref[obj:O1]{O1}), una
+scelta selettiva e non esaustiva. Il meccanismo di configurazione dei
+tier tramite file esterno (\cref{sec:impl-tier-config}) rende possibile
+estendere questa copertura ad altre classi e relazioni del knowledge
+graph senza modificare il codice del generatore; sfruttare
+concretamente questa possibilità per ampliare il dataset resta un lavoro
+da svolgere.
+
+\textbf{Valutazione a livello di esecuzione}. La metrica di valutazione
+impiegata in questo lavoro, l'exact match, richiede una corrispondenza
+carattere per carattere tra la query generata e quella di riferimento
+(\cref{sec:eval-experimental}). Una query semanticamente equivalente ma
+formulata in modo sintatticamente diverso, ad esempio con clausole in un
+ordine differente, viene quindi conteggiata come errore anche quando
+produrrebbe lo stesso risultato se eseguita sul knowledge graph. Una
+valutazione complementare, che esegua le query generate sull'endpoint di
+CVL e ne confronti i risultati restituiti anziché il solo testo,
+fornirebbe una stima più accurata delle prestazioni reali del modello.
+
+\textbf{Altre tecniche o modelli di adattamento}. Questo lavoro ha
+confrontato LoRA con il full fine-tuning (\cref{sec:eval-experimental}),
+ma non ha testato QLoRA, pure introdotta in \cref{sec:peft-lora} come
+tecnica in grado di ridurre ulteriormente l'occupazione di memoria
+rispetto a LoRA; allo stesso modo, non sono stati testati modelli di
+base diversi da Gemma 3 270M, di dimensioni maggiori o architettura
+differente, che potrebbero offrire una migliore capacità di
+generalizzazione a scapito di un costo computazionale più elevato.
+
+\textbf{Resilienza a interruzioni estesa al generatore}. Il requisito di
+resilienza a interruzioni (\hyperref[rnf:RNF2]{RNF2}) è soddisfatto
+dallo stadio di augmentation, che ricostruisce a ogni avvio l'elenco dei
+record già processati, ma non dal generatore, che non conserva alcuna
+informazione tra un'esecuzione interrotta e la successiva. Estendere un
+meccanismo analogo anche al generatore ridurrebbe il lavoro perso in
+caso di interruzione durante le fasi iniziali della pipeline.
 
 \backmatter
 
