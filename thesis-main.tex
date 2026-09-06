@@ -38,38 +38,36 @@ su knowledge graph clinico-oncologico}
 \frontmatter\frontispiece
 
 \begin{abstract}
-    Il Cancer Virtual Lab (CVL) raccoglie i dati clinici oncologici
-    dell'IRST "Dino Amadori" in un knowledge graph interrogabile tramite
-    SPARQL, un linguaggio formale che il personale clinico non possiede
-    tipicamente. Un'interfaccia in linguaggio naturale ridurrebbe questa
-    barriera, ma richiede un modello linguistico addestrato specificamente
-    sull'ontologia di CVL, e un dataset di addestramento per questo
-    compito non esiste.
+    Il lavoro proposto si colloca nel progetto Cancer Virtual Lab (CVL), il
+    quale raccoglie i dati clinici oncologici dell'IRCCS IRST "Dino Amadori" in
+    un Knowledge Graph interrogabile tramite SPARQL. La natura formale di SPARQL
+    rappresenta però una barriera per il personale sanitario e un'interfaccia in
+    linguaggio naturale (Text-to-SPARQL) permetterebbe di abbattere tale
+    barriera, ma richiederebbe un modello linguistico addestrato sull'ontologia
+    specifica di CVL, per la quale non esistono dataset di addestramento
+    pubblici.
 
-    Questo lavoro progetta e implementa una pipeline automatica in due
-    stadi per costruire un simile dataset. Il primo stadio genera coppie
-    di prompt e query SPARQL esplorando sistematicamente lo schema del
-    knowledge graph e campionando combinazioni di vincoli sintatticamente
-    corrette, coprendo quarantacinque entità organizzate in gruppi
-    configurabili. Il secondo stadio arricchisce ciascuna coppia con
-    formulazioni linguistiche alternative in dieci registri stilistici
-    distinti, aumentando la varietà del dataset senza alterarne la
-    correttezza semantica.
+    Questo lavoro progetta e implementa una pipeline automatizzata a due stadi
+    per la generazione di un dataset Text-to-SPARQL sintetico, garantendo
+    correttezza e varietà. Il primo stadio esplora lo schema del grafo e
+    campiona combinazioni di vincoli sintatticamente corrette, coprendo diverse
+    entità organizzate in gruppi di priorità basati sulla centralità clinica. Il
+    secondo stadio applica un meccanismo di mascheramento dei valori letterali e
+    un ciclo iterativo di parafrasi guidata per generare varianti in più
+    registri stilistici distinti, aumentando la ricchezza linguistica senza
+    alterare la semantica delle query.
 
-    La pipeline ha prodotto un dataset di quattordicimilaventuno esempi,
-    verificato privo di sovrapposizioni tra gli insiemi di addestramento,
-    validazione e test. Un modello Gemma 270M, addestrato tramite LoRA su
-    questo dataset, ha raggiunto un exact match del 46\% su un insieme di
-    test in stile coerente con l'addestramento, un risultato ottenuto
-    scegliendo il checkpoint in base alla validation loss anziché
-    all'ultima iterazione, e superiore al 18\% raggiunto da un confronto
-    con il full fine-tuning. L'analisi degli errori residui non ha
-    rilevato alcuna query sintatticamente non valida, mostrando che il
-    modello concentra le proprie difficoltà nella discriminazione tra
-    entità simili piuttosto che in un comportamento arbitrario. Il lavoro
-    individua infine cinque problemi di qualità nel dataset, due dei
-    quali già corretti, proponendo una via di risoluzione per i
-    restanti.
+    La pipeline ha prodotto in fase di testing un dataset di 14.021 esempi,
+    strutturato con una rigorosa separazione per record sorgente tra gli insiemi
+    di addestramento, validazione e test per evitare data leakage. Un modello
+    Gemma 3 270M, sottoposto a fine-tuning mediante LoRA su questo dataset, ha
+    raggiunto un exact match del 46\% sull'insieme di test in-distribution,
+    individuando il checkpoint ottimale tramite validation loss e superando
+    nettamente il full fine-tuning (18\%). L'analisi degli errori residui ha
+    mostrato un tasso dello 0\% di query sintatticamente non valide, dimostrando
+    che il modello apprende saldamente la grammatica SPARQL. Vengono infine
+    analizzati i problemi di qualità emersi nel dataset, delineando le relative
+    strategie di risoluzione.
 \end{abstract}
 
 
