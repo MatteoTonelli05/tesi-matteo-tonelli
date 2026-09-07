@@ -180,14 +180,14 @@ sezioni interconnesse:
           generativi senza meccanismi di contenimento delle allucinazioni.
 
     \item \textbf{Fine-Tuning di Modelli Linguistici nel Dominio Clinico
-              (\cref{sec:bg-finetuning}):} approfondisce le tecniche di
-          adattamento supervisionato (SFT), ponendo a confronto il
-          \textit{Full Fine-Tuning} con le strategie di addestramento
-          efficiente \textit{Parameter-Efficient Fine-Tuning} (PEFT) come
-          LoRA e QLoRA. La sezione motiva inoltre la scelta di modelli
-          ultra-compatti come Gemma 3 270M per l'esecuzione locale su dati
-          sensibili e descrive l'adozione del mascheramento della loss sui
-          token di input (\textit{Completion-Only Data Collator}).
+              (\cref{sec:bg-finetuning}):} approfondisce le tecniche di adattamento
+          supervisionato (SFT), ponendo a confronto il \textit{Full Fine-Tuning}
+          con le strategie di addestramento efficiente
+          \textit{Parameter-Efficient Fine-Tuning} (PEFT) come LoRA e QLoRA. La
+          sezione motiva inoltre la scelta di modelli ultra-compatti per
+          l'esecuzione locale su dati sensibili e descrive l'adozione del
+          mascheramento della loss sui token di input (\textit{Completion-Only
+              Data Collator}).
 \end{itemize}
 
 \section{Cancer Virtual Lab}
@@ -489,14 +489,15 @@ offrano volumi elevati di dati, presentano limiti strutturali insormontabili
 quando applicati a ontologie verticali: la rigidità dei template genera
 formulazioni linguistiche artificiali e ripetitive, incapaci di coprire la
 varietà lessicale e la complessità relazionale tipica del linguaggio umano
-specialistico.
+specialistico-oncologico.
 
 \subsection{Sintesi Guidata da Regole e Grammatiche Formali (MK-SQuIT)}
 Per superare la rigidità dei template tradizionali, successivi lavori hanno
 esplorato tecniche di sintesi automatizzata basate sulla generazione orientata
 alla grammatica, come ad esempio la metodologia MK-SQuIT \cite{mksquit}. Questo
-approccio utilizza grammatiche libere da contesto o alberi di derivazione logica
-per combinare ricorsivamente frammenti di domande e vincoli formali.
+approccio sfrutta grammatiche formali ed elementi di logica per assemblare in
+modo ricorsivo piccoli frammenti di frase con i rispettivi vincoli della query,
+costruendo così domande strutturalmente più articolate.
 
 Sebbene tali sistemi migliorino la copertura delle combinazioni logiche,
 mantengono un forte legame con la struttura formale sottostante. Le domande
@@ -533,11 +534,11 @@ generali non coprono l'ontologia oncologica IRST, i template rigidi falliscono
 sulla varietà linguistica e la generazione non vincolata tramite LLM espone al
 rischio inaccettabile di corruzione dei dati clinici.
 
-Per tali ragioni, il presente lavoro adotta una strategia ibrida e controllata:
-un generatore combinatorio strutturato basato sullo schema del grafo (per
-garantire la correttezza formale e la copertura mirata delle 45 entità)
-integrato con un secondo stadio di augmentation linguistica guidata da LLM, ma
-rigorosamente vincolata da un meccanismo di mascheramento dei valori letterali.
+Per tali ragioni, questo lavoro adotta una strategia ibrida e controllata. Un
+primo stadio impiega un generatore combinatorio basato sullo schema del grafo
+per garantire la correttezza formale delle query; a questo fa seguito un secondo
+stadio di augmentation linguistica guidato da LLM, rigorosamente vincolato da un
+meccanismo di mascheramento dei valori letterali.
 
 \section{Fine-tuning di Large Language Model}
 \label{sec:bg-finetuning}
