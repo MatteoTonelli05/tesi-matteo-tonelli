@@ -7,6 +7,11 @@
 \usepackage{shortcuts}
 \usepackage{acronym}
 
+% Pacchetti per le tabelle avanzate
+\usepackage{tabularx}  % Tabelle a larghezza fissa con colonne adattabili (X)
+\usepackage{booktabs}  % Linee professionali (\toprule, \midrule, \bottomrule)
+\usepackage{float}     % Posizionamento preciso delle tabelle ([H])
+
 \school{\unibo}
 \programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
 \title{Generazione automatica di dataset text-to-SPARQL per fine-tuning di LLM
@@ -180,14 +185,14 @@ sezioni interconnesse:
           generativi senza meccanismi di contenimento delle allucinazioni.
 
     \item \textbf{Fine-Tuning di Modelli Linguistici nel Dominio Clinico
-              (\cref{sec:bg-finetuning}):} approfondisce le tecniche di adattamento
-          supervisionato (SFT), ponendo a confronto il \textit{Full Fine-Tuning}
-          con le strategie di addestramento efficiente
-          \textit{Parameter-Efficient Fine-Tuning} (PEFT) come LoRA e QLoRA. La
-          sezione motiva inoltre la scelta di modelli ultra-compatti per
-          l'esecuzione locale su dati sensibili e descrive l'adozione del
-          mascheramento della loss sui token di input (\textit{Completion-Only
-              Data Collator}).
+              (\cref{sec:bg-finetuning}):} approfondisce le tecniche di
+          adattamento supervisionato (SFT), ponendo a confronto il
+          \textit{Full Fine-Tuning} con le strategie di addestramento
+          efficiente \textit{Parameter-Efficient Fine-Tuning} (PEFT) come
+          LoRA e QLoRA. La sezione motiva inoltre la scelta di modelli
+          ultra-compatti per l'esecuzione locale su dati sensibili e
+          descrive l'adozione del mascheramento della loss sui token di
+          input (\textit{Completion-Only Data Collator}).
 \end{itemize}
 
 \section{Cancer Virtual Lab}
@@ -522,9 +527,9 @@ introduce criticità rilevanti:
           codici clinici critici vengono frequentemente modificati o omessi dal
           modello durante la generazione del testo;
     \item \textit{Assenza di controlli strutturali:} l'assenza di un
-          collegamento deterministico tra la query SPARQL e il prompt generato rende
-          impossibile garantire la correttezza semantica senza un'accurata validazione
-          esterna.
+          collegamento deterministico tra la query SPARQL e il prompt generato
+          rende impossibile garantire la correttezza semantica senza un'accurata
+          validazione esterna.
 \end{itemize}
 
 \subsection{Motivazioni della Scelta Metodologica nel Contesto CVL}
@@ -763,6 +768,13 @@ non direttamente osservabili nel singolo output prodotto.
 \chapter{Progettazione}
 \label{chap:progettazione}
 
+In questo capitolo vengono illustrate le decisioni progettuali e le strategie
+architetturali adottate per soddisfare i requisiti e i vincoli definiti nella
+fase di analisi. La trattazione muove da una visione architetturale ad alto
+livello, incentrata sulla coordinazione tra i macro-componenti del sistema, per
+poi scendere nel dettaglio dei singoli sottosistemi, evidenziando le motivazioni
+ingegneristiche alla base di ciascuna scelta.
+
 \section{Analisi dei problemi}
 
 I requisiti e i vincoli descritti nel capitolo precedente si traducono in tre
@@ -807,14 +819,14 @@ prodotti.
           valutazione.
 \end{itemize}
 
-I tre sotto-problemi individuati nell'analisi vengono affrontati da componenti
-distinti della pipeline. \hyperref[prob:P1]{P1} è affrontato attraverso il
-generatore parametrico di query, che consente di controllare lo spazio delle
-configurazioni esplorate. \hyperref[prob:P2]{P2} è affrontato attraverso la fase
-di augmentation linguistica, progettata per produrre formulazioni diverse a
-partire dalla medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di
-validazione, che verifica gli output prodotti dalle fasi precedenti prima del
-loro inserimento nel dataset.
+I tre sotto-problemi vengono affrontati da componenti distinti della pipeline.
+\hyperref[prob:P1]{P1} è affrontato attraverso il generatore parametrico di
+query, che consente di controllare lo spazio delle configurazioni esplorate.
+\hyperref[prob:P2]{P2} è affrontato attraverso la fase di augmentation
+linguistica, progettata per produrre formulazioni diverse a partire dalla
+medesima query. \hyperref[prob:P3]{P3} richiede invece una fase di validazione,
+che verifica gli output prodotti dalle fasi precedenti prima del loro
+inserimento nel dataset.
 
 \section{Design del generatore}
 
@@ -825,108 +837,113 @@ sistema, responsabile della generazione strutturata delle coppie prompt-query.
 \label{sec:design-pipeline}
 
 Generare una singola coppia prompt-query valida a partire da un'entità dello
-schema richiede diversi passaggi logicamente distinti tra loro. Occorre prima
-sapere quali proprietà e relazioni siano disponibili per quell'entità, poi
-individuare i percorsi che permettono di raggiungerle nel grafo, poi scegliere
-quali di quelle proprietà vincolare rispettando i limiti imposti, poi tradurre
-questa scelta in una struttura di query, poi decidere con quali valori concreti
-riempirla, poi trasformare il tutto in un testo in linguaggio naturale, e infine
-verificare che il risultato ottenuto sia davvero corretto. Concatenare tutti
-questi passaggi in un'unica procedura indifferenziata renderebbe il codice
-difficile da comprendere, da testare e da modificare, perché un cambiamento
-riguardante anche un solo aspetto, per esempio il modo in cui si sceglie un
-valore, rischierebbe di intrecciarsi con la logica di tutti gli altri.
+schema richiede una sequenza di passaggi logicamente distinti. Risulta infatti
+necessario individuare le proprietà e le relazioni disponibili per l'entità
+selezionata, determinare i percorsi che consentono di raggiungerle all'interno
+del grafo, selezionare i vincoli da applicare nel rispetto dei limiti
+configurati, tradurre tali selezioni in una struttura di query, riempire la
+struttura con valori concreti, formulare il corrispondente testo in linguaggio
+naturale e, infine, verificare la correttezza formale del risultato ottenuto.
 
-Il generatore struttura quindi questo processo come una pipeline di fasi ben
-definite, ciascuna responsabile di una trasformazione specifica, che riceve in
-ingresso il risultato della fase precedente e produce l'input per quella
-successiva.
+Accorpare tutte queste operazioni all'interno di un'unica procedura
+indifferenziata renderebbe la struttura rigida e complessa da sottoporre a test,
+poiché la modifica di un singolo aspetto, quale la logica di selezione dei
+valori, rischierebbe di ripercuotersi impropriamente sui componenti adibiti alle
+altre trasformazioni.
 
-Questa scomposizione rende ciascuna fase comprensibile e verificabile in
-isolamento, senza dover ragionare sull'intero processo per capire o modificare
-una singola trasformazione. Apre inoltre la strada, in fase di implementazione,
-a una corrispondenza diretta tra ciascuna fase concettuale qui definita e il
-componente software responsabile di realizzarla (\cref{sec:impl-mixin}).
+Per superare tale criticità, il generatore struttura il processo come una
+pipeline composta da fasi ben definite, in cui ciascun modulo riceve in ingresso
+il risultato del passaggio precedente e ne produce l'input per il successivo.
+
+In fase di progettazione, questa scomposizione si riflette direttamente
+nell'adozione del pattern architetturale \textit{Mixin}: a ciascuna fase
+concettuale della pipeline corrisponde un Mixin dedicato, responsabile di
+un'unica trasformazione isolata. Tale approccio rende ogni componente
+autonomamente verificabile e predispone una corrispondenza diretta tra il
+modello concettuale del generatore e la sua architettura software, descritta nel
+dettaglio in \cref{sec:impl-mixin}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{figures/pipeline-sample.png}
+    \caption{Architettura macro ad alto livello della pipeline dati: flusso sequenziale dal Knowledge Graph fino alla validazione del dataset finale.}
+    \label{fig:macro-architecture}
+\end{figure}
 
 \subsection{Modello del dominio}
 
 Il modello di dominio di questo progetto non coincide con l'intero schema del
-knowledge graph del Cancer Virtual Lab, ma con un sottoinsieme di 45 classi
-fornito dall'IRST. La selezione non ha seguito un criterio puramente tecnico,
-quale l'inclusione di ogni classe disponibile nel triplestore, ma è stata
-guidata dagli obiettivi clinici definiti a monte del progetto. Questo
-sottoinsieme, e la struttura relazionale che lo lega, costituisce un dato di
-fatto imposto dal knowledge graph ricevuto, non una scelta progettuale: le
-decisioni discusse nel resto di questa sezione riguardano non quali classi
-includere, ma come organizzarle e pesarle ai fini della generazione.
+Knowledge Graph del Cancer Virtual Lab, ma con un sottoinsieme di 45 classi
+fornito dall'IRST. La selezione delle classi non ha seguito un criterio
+puramente tecnico o esaustivo, quale l'inclusione indiscriminata di ogni nodo
+disponibile nel triplestore. Ma, al contrario, è stata strettamente guidata
+dagli obiettivi clinici del progetto quali la costruzione di un dataset
+focalizzato su query ad alta utilità operativa, ovvero capaci di rispecchiare i
+quesiti informativi realmente posti da medici e ricercatori nella pratica
+oncologica (quali l'individuazione di coorti di pazienti, il tracciamento dei
+protocolli terapeutici e l'analisi della risposta ai trattamenti). Questo
+sottoinsieme e la struttura relazionale che lo legano costituiscono un vincolo
+imposto dal grafo ricevuto; di conseguenza, le decisioni progettuali affrontate
+in questa sezione riguardano il modo in cui organizzare e pesare tali classi ai
+fini della generazione, e non la scelta di quali includere.
 
-Le quarantacinque classi sono organizzate in gruppi di priorità decrescente,
-come in \cref{fig:domain-model}, secondo un criterio di distanza strutturale dal
-nodo Patient. L'adozione di questo criterio risponde a un'osservazione sul
-dominio applicativo stesso: Patient costituisce la radice naturale del grafo
-clinico, coerentemente con il modo in cui un clinico formula una domanda, ovvero
-a partire dal paziente, non da una classe periferica quale può essere un singolo
-biomarcatore. La distanza dal nodo radice offre, in aggiunta, un criterio
-oggettivo e calcolabile direttamente dalla struttura del grafo, senza richiedere
-l'imposizione anticipata di un giudizio soggettivo su quale classe sia più
-rilevante dal punto di vista clinico. Tale distanza si è inoltre rivelata un
-proxy efficace per la complessità della query generabile: una classe
-raggiungibile con un solo passaggio relazionale produce tipicamente domande
-semplici e dirette, mentre una classe raggiungibile con due o tre passaggi
-richiede query che concatenano più relazioni, rendendo la distanza informativa
-non solo rispetto alla rilevanza clinica, ma anche rispetto alla difficoltà
-attesa della domanda-tipo associata a ciascuna classe.
+Le 45 classi sono organizzate in gruppi di priorità decrescente
+(\cref{fig:domain-model}) secondo un criterio di distanza strutturale dal nodo
+\texttt{Patient}. L'adozione di tale metrica risponde a un'osservazione sul
+dominio applicativo stesso: \texttt{Patient} costituisce la radice naturale del
+grafo clinico, coerentemente con la modalità con cui un operatore sanitario
+formula un quesito, ovvero a partire dall'entità paziente e non da una classe
+periferica (quale può essere un singolo biomarcatore). La distanza dalla radice
+offre un criterio oggettivo e calcolabile direttamente dalla topologia del
+grafo, evitando l'imposizione arbitraria di un giudizio soggettivo sulla
+rilevanza delle classi. Inoltre, tale misura rappresenta un'efficace
+approssimazione della complessità delle query, basti pensare che una classe
+raggiungibile con un solo passaggio relazionale genera tipicamente domande
+dirette, mentre una classe raggiungibile con due o tre passaggi richiede query
+che concatenano più relazioni, fornendo così un'indicazione sia sulla centralità
+clinica sia sulla difficoltà attesa del quesito.
 
-L'assenza di un simile criterio di priorizzazione avrebbe comportato conseguenze
+L'assenza di un criterio di priorizzazione avrebbe comportato conseguenze
 dirette sul dataset prodotto, discusse in relazione a \hyperref[obj:O4]{O4} nel
-capitolo di analisi. Trattando le quarantacinque classi come equivalenti, il
-sistema avrebbe allocato un budget di generazione identico a ciascuna,
-indipendentemente dalla sua centralità nel dominio clinico. Classi
-concettualmente centrali, quali Patient, Diagnosis e Therapy, avrebbero ricevuto
-una rappresentazione insufficiente rispetto alla frequenza con cui compaiono
-nell'uso reale, mentre classi periferiche e altamente granulari, quali le
-singole categorie della classificazione TNM, avrebbero prodotto un numero di
-esempi ridondante rispetto alla loro effettiva rilevanza. Il risultato atteso di
-un simile sbilanciamento non sarebbe stato un dataset semplicemente meno
-efficiente, ma un modello allenato su di esso incline a generalizzare peggio
-proprio sulle categorie di domande più frequenti nell'uso previsto del sistema.
+capitolo di analisi. Trattando le 45 classi come equivalenti, il sistema avrebbe
+allocato un budget di generazione identico a ciascuna. Di conseguenza, classi
+concettualmente centrali quali \texttt{Patient}, \texttt{Diagnosis} e
+\texttt{Therapy} avrebbero ottenuto una rappresentazione insufficiente rispetto
+alla frequenza d'uso reale; al contrario, classi periferiche o altamente
+granulari (come le singole categorie della classificazione TNM) avrebbero
+prodotto un numero di esempi ridondante. Un simile sbilanciamento avrebbe
+compromesso la capacità del modello addestrato di generalizzare in modo efficace
+sulle categorie di domande più frequenti.
 
-La distanza dal nodo Patient non costituisce l'unico criterio di raggruppamento
-adottato nel corso del progetto. Un secondo raggruppamento, tematico anziché
-strutturale, organizza le medesime quarantacinque classi per area clinica
-(demografia, stadiazione, trattamento, ecc.) ed è stato introdotto in una fase
-successiva del progetto, discussa nel capitolo di implementazione. I due criteri
-non sono stati concepiti come alternativi, ma come complementari; di fatti la
-distanza strutturale fornisce una progressione di complessità pulita, adatta a
-un primo passaggio di generazione, mentre il raggruppamento tematico ricombina
-le stesse classi secondo relazioni di co-occorrenza diverse, consentendo a un
-secondo passaggio di generazione di produrre query multi-relazionali
-strutturalmente nuove, anziché ricampionare gli stessi pattern già coperti dal
-primo raggruppamento.
+La distanza dal nodo \texttt{Patient} non costituisce l'unico criterio di
+raggruppamento adottato. Un secondo schema, di natura tematica, organizza le
+medesime 45 classi per area clinica (demografia, stadiazione, trattamento, ecc.)
+ed è stato introdotto in una fase successiva, illustrata nel capitolo di
+implementazione. I due criteri risultano complementari: la distanza strutturale
+fornisce una progressione pulita di complessità per un primo passaggio di
+generazione, mentre il raggruppamento tematico ricombina le classi secondo
+relazioni di co-occorrenza differenti, consentendo a un secondo passaggio di
+produrre query multi-relazionali strutturalmente nuove.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=.8\linewidth]{figures/domain-model-tiers.pdf}
-    \caption{Modello di dominio semplificato: Patient come nodo centrale, con
-        una classe rappresentativa per ciascuno dei sei gruppi di priorità}
+    \caption{Modello di dominio semplificato, si noti Patient come nodo centrale}
     \label{fig:domain-model}
 \end{figure}
 
 Il numero di record generati per ciascun gruppo decresce dal centro alla
-periferia del dominio ma tale decrescita non segue una progressione lineare
-rigida. Questo andamento è coerente con una calibrazione empirica, ovvero
-condotta bilanciando l'equilibrio finale del dataset, piuttosto che con
-l'applicazione di una formula matematica definita anticipatamente. Lo stesso
-principio di calibrazione empirica viene applicato al sistema dei quattro
-parametri descritto nella sezione seguente.
+periferia del dominio, seguendo un andamento calibrato empiricamente per
+bilanciare l'equilibrio finale del dataset, piuttosto che una formula matematica
+definita a priori. Lo stesso principio di calibrazione empirica viene applicato
+al sistema dei quattro parametri descritto nella sezione seguente.
 
-In sintesi, il dataset text-to-SPARQL prodotto da questo sistema non è generato
-in modo uniforme sull'intero schema disponibile, ma segue una gerarchia di
-rilevanza clinica propria del progetto. Le classi incluse e i parametri di
-complessità applicati a ciascuna sono stati scelti con l'obiettivo di riflettere
-le tipologie di domande ritenute più rilevanti nel contesto del Cancer Virtual
-Lab, privilegiando la rilevanza del dominio rispetto alla massimizzazione della
-copertura formale del grafo.
+In sintesi, il dataset Text-to-SPARQL prodotto non è generato in modo uniforme
+sull'intero schema disponibile, ma rispetta una gerarchia di rilevanza clinica.
+Le classi incluse e i parametri di complessità applicati riflettono le tipologie
+di query ritenute prioritarie nel contesto del Cancer Virtual Lab, privilegiando
+la pertinenza di dominio rispetto alla massimizzazione della copertura formale
+del grafo.
 
 
 \subsection{Sistema dei parametri}
@@ -948,13 +965,11 @@ della query risultante:
     \item il numero di valori ammessi per ciascun vincolo.
 \end{itemize}
 
-Questi quattro parametri corrispondono a dimensioni strutturalmente distinte
-lungo cui una query SPARQL può crescere in complessità. La loro separazione
-consente di variare un aspetto della complessità senza doverlo necessariamente
-far crescere insieme agli altri. Trattare la complessità come una singola
-grandezza scalare avrebbe nascosto questa distinzione, impedendo un controllo
-mirato su quale aspetto specifico della query si desidera far variare per una
-determinata classe o gruppo di classi.
+Disaccoppiare questi quattro parametri consente di modulare la struttura della
+query in modo mirato. In questo modo è possibile, ad esempio, aumentare la
+profondità delle relazioni sul grafo senza necessariamente incrementare il
+numero di filtri sui singoli nodi, evitando la generazione di query
+strutturalmente sbilanciate o non calibrate per lo schema di destinazione.
 
 \begin{figure}[H]
     \centering
@@ -973,31 +988,38 @@ simultaneamente, incorrevano in timeout o fallivano l'esecuzione contro il
 triplestore reale, rendendo necessario mantenere ciascun parametro entro un
 tetto massimo compatibile con le capacità dell'endpoint.
 
-\subsection{Meccanismo di estensione}
+\subsection{Meccanismo di estensione incrementale}
 
-Il sistema di parametri descritto nella sezione precedente offre, come
-conseguenza diretta della sua struttura, una capacità che va oltre la sola
-configurazione iniziale della complessità: la possibilità di ampliare il dataset
-generato senza rigenerare le porzioni già prodotte, e senza il rischio che le
-nuove query si sovrappongano a quelle esistenti.
+Oltre a calibrare la complessità delle query, la struttura del sistema di
+parametri supporta l'estensione incrementale del dataset. Questa proprietà
+consente di integrare nuovi esempi in momenti successivi senza dover rielaborare
+le porzioni già generate e garantendo l'assenza di sovrapposizioni con il corpus
+esistente.
 
-Questa capacità è resa possibile dal fatto che un intervallo minimo-massimo
-definisce uno spazio di configurazioni delimitato con precisione. Impostando,
-per un nuovo preset di generazione, un intervallo disgiunto da quello di un
-preset precedente su almeno una dimensione rilevante, i due spazi risultano
-disgiunti a livello di configurazione dei parametri. In questo modo il nuovo
-preset esplora combinazioni che non appartenevano allo spazio configurato in
-precedenza. La proprietà è quindi garantita a livello parametrico; l'assenza di
-duplicati a livello di query è invece una proprietà che dipende dal modo in cui
-le configurazioni vengono trasformate in query e, se necessario, può essere
-verificata esplicitamente durante la generazione.
+Il meccanismo si basa sulla definizione di regioni disgiunte all'interno dello
+spazio parametrico. Poiché ciascun parametro (profondità, disgiunzioni,
+proprietà e valori) è vincolato da un intervallo minimo e massimo, è possibile
+configurare un nuovo \textit{preset} di generazione impostando intervalli
+distinti da quelli usati in precedenza su almeno una dimensione. Così facendo,
+il nuovo ciclo di generazione esplora esclusivamente combinazioni strutturali
+mai campionate prima.
 
-Questa distinzione rende il meccanismo di estensione più preciso: l'aggiunta di
-nuove porzioni al dataset non richiede una riprogettazione del generatore, ma la
-definizione di nuovi preset i cui intervalli siano scelti in relazione a quelli
-già utilizzati. La procedura può essere applicata ripetutamente, mantenendo
-traccia dello spazio parametrico già esplorato e introducendo nuove
-configurazioni al di fuori di esso.
+In fase di progettazione, questa separazione garantisce l'estensibilità del
+sistema a due livelli:
+\begin{itemize}
+    \item \textbf{Estensione parametrica:} permette di ampliare il volume di
+          dati definendo nuovi file di configurazione (\textit{tier}) esterni,
+          senza modificare il codice sorgente del generatore;
+    \item \textbf{Verifica dei duplicati:} l'assenza di sovrapposizioni
+          garantita a livello teorico dalle configurazioni viene ulteriormente
+          verificata durante la generazione, scartando eventuali query identiche
+          prodotte per coincidenza stocastica.
+\end{itemize}
+
+L'aggiunta di nuove porzioni al dataset non richiede quindi una riprogettazione
+dell'architettura, ma la semplice definizione di nuovi file di configurazione i
+cui intervalli siano scelti in modo complementare rispetto a quelli già
+esplorati.
 
 \section{Design dell'augmentation}
 
@@ -1007,42 +1029,55 @@ prodotte dal generatore in più varianti linguistiche naturali, secondo il
 compromesso tra varietà e fedeltà semantica richiesto da \hyperref[obj:O2]{O2} e
 la robustezza semantica richiesta da \hyperref[rnf:RNF3]{RNF3}.
 
-\subsection{Mascheramento dei valori letterali}
+\subsection{Mascheramento dei valori letterali e strategie di preservazione}
 
-Il problema affrontato da questo stadio è duplice: da un lato produrre varie
-riformulazioni linguisticamente a partire da uno stesso prompt, dall'altro
-garantire che tale variazione non alteri i valori letterali che compaiono nel
-prompt e che sono referenziati dalla query SPARQL associata (identificativi,
-codici di classificazione clinica, date). Lasciare che un modello linguistico
-riscriva liberamente l'intero testo, valori inclusi, esporrebbe il sistema al
-rischio già discusso in \hyperref[rf:RF3]{RF3} e \hyperref[rnf:RNF3]{RNF3},
-ovvero una riformulazione apparentemente valida ma silenziosamente scorretta
-rispetto alla query originale.
+Il secondo stadio della pipeline affronta la sfida di bilanciare due requisiti
+contrastanti individuati nella fase di analisi; da un lato massimizzare la
+varietà linguistica dei prompt per evitare formulazioni rigide
+(\hyperref[obj:O2]{O2}, \hyperref[rf:RF2]{RF2}), dall'altro garantire la rigida
+fedeltà semantica e la preservazione dei valori clinici rispetto alla query
+SPARQL associata (\hyperref[rf:RF3]{RF3}, \hyperref[rnf:RNF3]{RNF3}).
 
-La soluzione adottata separa la variazione linguistica dai valori da preservare
-tramite un meccanismo di mascheramento. Prima di essere sottoposto al modello,
-ogni valore letterale identificato nel prompt viene sostituito da un token
-segnaposto opaco; il modello riformula quindi il testo mascherato, e solo al
-termine della generazione i segnaposto vengono sostituiti nuovamente con i
-valori originali. In questo modo il modello non ha mai accesso al valore
-letterale reale durante la riformulazione, e può quindi soltanto ricollocarlo
-all'interno di una struttura sintattica diversa.
+Lasciare che un modello linguistico riscriva liberamente l'intero testo, valori
+compresi, esporrebbe il sistema ai rischi già identificati nel
+\cref{chap:analisi}, quali l'alterazione o la perdita silenziosa di
+identificativi, codici di classificazione o date.
 
-Sono stati introdotti inoltre due accorgimenti specifici per la gestione dei
-valori mascherati. Il primo riguarda quando un segnaposto rappresenta una
-condizione vera o falsa, come la presenza di un evento avverso; in questo caso
-il valore non viene mantenuto nella forma letterale true o false, ma viene
-convertito in una formulazione più naturale per il linguaggio umano, come «con»
-o «senza», seguita dal termine clinico corrispondente.
+Per risolvere questo problema, l'architettura adotta un pattern di mascheramento
+deterministico che disaccoppia la struttura sintattica dai dati puntuali. Prima
+di interpellare il modello, ogni valore letterale referenziato nella query viene
+sostituito da un token segnaposto opaco (es. \texttt{[VAL\_A1B2]}). Il modello
+opera così esclusivamente sulla componente sintattica e relazionale della frase,
+privo di accesso ai dati reali, i quali vengono ripristinati solo al termine
+della generazione. In questo modo si garantisce per costruzione che la
+riformulazione non possa modificare i valori target.
 
-Il secondo accorgimento riguarda i record caratterizzati da un numero elevato di
-valori mascherati. In questi casi, il testo non viene sottoposto al modello
-attraverso un'unica chiamata, ma viene suddiviso in più porzioni, ciascuna
-contenente al massimo un numero prefissato di segnaposto. Le singole porzioni
-vengono quindi riformulate separatamente e ricomposte al termine della
-generazione. Questa scelta deriva da un'osservazione empirica secondo cui, oltre
-una determinata soglia di segnaposto presenti nello stesso prompt, la qualità
-delle riformulazioni generate tende a diminuire.
+Per superare i limiti espressivi e computazionali del mascheramento rigido, il
+design del modulo integra due strategie specifiche:
+
+\begin{itemize}
+    \item \textbf{Traduzione proposizionale dei vincoli booleani:} Trattare i
+          valori booleani come semplici stringhe letterali (es. \texttt{"true"}
+          o \texttt{"false"}) produrrebbe prompt mascherati innaturali e
+          sintatticamente rigidi. In fase di design si è stabilito di convertire
+          i vincoli booleani, prima del mascheramento, in forme proposizionali
+          naturali (es. trasformando una condizione su un evento avverso nelle
+          preposizioni «con» o «senza» seguite dal termine clinico). Questa
+          scelta risolve il problema della naturalezza espressiva senza delegare
+          al modello la gestione del valore di verità.
+
+    \item \textbf{Decomposizione in porzioni ad alta densità (Chunking):}
+          All'aumentare del numero di segnaposto in un singolo prompt, la
+          capacità del modello di conservare ed elaborare tutti i token opachi
+          degrada, aumentando il tasso di allucinazioni o l'omissione
+          involontaria di segnaposto. Per mitigare questo limite, il sistema
+          applica un principio di decomposizione: i prompt con un numero di
+          segnaposto superiore a una soglia prestabilita vengono suddivisi in
+          porzioni logiche indipendenti (\textit{chunk}), ciascuna contenente un
+          budget limitato di token. Ogni porzione viene parafrasata
+          separatamente e ricomposta nel testo finale, garantendo un tasso di
+          accettazione elevato anche per query ad alta complessità combinatoria.
+\end{itemize}
 
 \subsection{Generazione iterativa e validazione}
 
@@ -1087,40 +1122,76 @@ comportamento di ripiego. In questo modo si evita di accettare silenziosamente
 una formulazione che violi i vincoli definiti da \hyperref[rf:RF3]{RF3} o
 \hyperref[rnf:RNF3]{RNF3}.
 
-Il numero di varianti richieste per ciascun record non è inoltre fissato in modo
-uniforme, ma proporzionato al numero di valori mascherati nel record: un prompt
-con pochi valori offre in pratica poco margine di riformulazione prima di
-esaurire le combinazioni naturali, per cui imporre lo stesso numero di varianti
-richieste a un record semplice e a uno complesso avrebbe prodotto, nel primo
-caso, un'alta proporzione di tentativi rifiutati per eccessiva similarità.
+Inoltre, il budget di varianti target assegnato a ciascun record non viene
+definito in modo uniforme, ma calcolato dinamicamente tramite una funzione
+proporzionale alla densità di valori mascherati presenti nel prompt. Un testo
+caratterizzato da un numero ridotto di vincoli presenta uno spazio di
+variabilità linguistica ristretto; imporre una quota fissa di varianti a prompt
+semplici avrebbe generato un'elevata frequenza di rigetti per eccessiva
+similarità lessicale, saturando inutilmente il ciclo di tentativi e degradando
+l'efficienza complessiva del processo (\hyperref[rnf:RNF1]{RNF1}). L'adozione di
+una soglia adattiva garantisce quindi che la pressione generativa sia
+concentrata sui record ad alta complessità combinatoria, massimizzando la
+varietà utile ed evitando cicli di retry ridondanti sui casi più semplici.
 
 \subsection{Varietà stilistica}
 
 Il solo mascheramento non garantisce, di per sé, la varietà linguistica
-richiesta da \hyperref[obj:O2]{O2}: un modello lasciato libero di riformulare
-tende a convergere su un piccolo numero di strutture sintattiche ricorrenti. Il
-sistema affronta questo problema definendo un insieme di dieci registri
-stilistici predefiniti (ad esempio una formulazione tecnica in stile
-interrogazione a database, una clinico-formale, una colloquiale, una statistica
-orientata al conteggio), esplicitamente descritti al modello a ogni chiamata.
+richiesta da \hyperref[obj:O2]{O2}, anzi un modello lasciato libero di
+riformulare tenderebbe a convergere su un piccolo numero di strutture
+sintattiche ricorrenti. Il sistema affronta questo problema definendo un insieme
+di dieci registri stilistici predefiniti (ad esempio una formulazione tecnica in
+stile interrogazione a database, una clinico-formale, una colloquiale, una
+statistica orientata al conteggio), esplicitamente descritti al modello a ogni
+chiamata.
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{>{\bfseries}l X}
+        \toprule
+        Stile                & Formulazione della domanda
+        \\
+        \midrule
+        Tecnico/SQL          & Estrai il conteggio totale dei record nella
+        tabella pazienti che presentano la codifica 'Mammella femminile' e una
+        data di nascita compresa nel range 01/01/1980 - 07/08/1995.              \\
+        Clinico Formale      & Quanti soggetti di sesso femminile con diagnosi
+        oncologica alla mammella risultano nati nel periodo compreso tra
+        l'inizio del 1980 e il 7 agosto 1995?                                    \\
+        Basato sull'età      & Fornisci il numero di pazienti con diagnosi
+        'Mammella femminile' che hanno attualmente un'età compresa tra i 30 e i
+        46 anni.                                                                 \\
+        Gestionale/Reporting & Rapporto volumetrico: quante unità afferiscono
+        alla patologia 'Mammella femminile' limitatamente alla coorte di nascita
+        1980-1995 (fino al 7 agosto)?                                            \\
+        Linguaggio Naturale  & Quante pazienti abbiamo in archivio che sono nate
+        tra l'80 e metà agosto '95 e che soffrono di problemi alla mammella
+        femminile?                                                               \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Esempio di variazione stilistica applicata a 5 registri rappresentativi a partire dal medesimo prompt mascherato.}
+    \label{tab:style-variations-compact}
+\end{table}
 
 Gli stili non vengono assegnati alle varianti in modo casuale, ma percorsi in
 sequenza ciclica, in modo che la distribuzione degli stili sulle varianti
 generate risulti uniforme anziché soggetta alla variabilità di un'estrazione
 casuale. Per ciascuno stile, il sistema mantiene inoltre una memoria a breve
-termine delle formulazioni e delle parole di apertura usate più di recente: un
-nuovo candidato che ripropone un'apertura già usata di recente per lo stesso
-stile viene rifiutato dalla validazione allo stesso modo di una riformulazione
-troppo simile a livello di intero testo, estendendo così il controllo di varietà
-anche alla struttura delle prime parole della frase, non solo al suo contenuto
-complessivo.
+termine delle formulazioni e delle parole di apertura usate più di recente, così
+rifiutando eventuali nuovi candidati che riproponessere un'apertura già usata di
+recente per lo stesso stile o una riformulazione troppo simile a livello di
+intero testo, estendendo così il controllo di varietà anche alla struttura delle
+prime parole della frase, non solo al suo contenuto complessivo.
 
-Il sistema conserva infine, per ciascun record, anche una modalità alternativa
-priva di mascheramento, che riproduce il comportamento originario a chiamata
-singola sull'intero testo. Questa modalità non costituisce un secondo percorso
-di produzione, ma un termine di paragone esplicito, i cui risultati sono
-discussi assieme a quelli della modalità con mascheramento nel capitolo di
-valutazione.
+Infine, per ciascun record il sistema conserva anche una formulazione di
+controllo generata senza mascheramento, ottenuta inviando l'intero testo al
+modello in un'unica richiesta diretta. Questa modalità non rappresenta un
+percorso di produzione alternativo, bensì un punto di confronto semplice
+(baseline) introdotto per misurare i reali benefici del mascheramento sulla
+preservazione dei dati e sulla qualità del testo. La valutazione comparativa tra
+i due approcci è trattata nella \cref{sec:eval-masking-comparison}.
 
 
 \chapter{Implementazione}
@@ -1137,19 +1208,18 @@ i due stadi del sistema sono stati sviluppati.
 \subsection{Architettura a mixin}
 \label{sec:impl-mixin}
 
-La pipeline di generazione appena introdotta a livello di design
-(\cref{sec:design-pipeline}) è realizzata concretamente da un'unica classe,
-\texttt{BulkDatasetGenerator}, ottenuta mediante ereditarietà multipla da sei
-\emph{mixin}\footnote{Un mixin è una classe pensata per essere combinata con
-    altre tramite ereditarietà multipla, fornendo un insieme coeso di funzionalità
-    senza costituire di per sé una gerarchia di tipi completa.}, uno per ciascuna
-fase della pipeline. Questa struttura permette di mantenere la corrispondenza
-diretta tra fase concettuale e componente software già motivata in fase di
-design, con un'unica interfaccia per l'intero processo di generazione: le
-diverse fasi possono infatti essere modificate o ampliate intervenendo
-principalmente sul mixin che ne implementa la relativa responsabilità, senza
-dover toccare gli altri. La composizione della classe principale è riportata nel
-\cref{lst:mixin-composition}.
+La pipeline di generazione descritta nel \cref{sec:design-pipeline} è realizzata
+concretamente dalla classe \texttt{BulkDatasetGenerator}, la quale eredita
+mediante ereditarietà multipla da sei \emph{mixin}, uno per ciascuna fase del
+processo.
+
+In coerenza con quanto introdotto nel \cref{sec:bg-software-tools}, questa
+scelta architetturale applica il principio di singola responsabilità, garantendo
+una corrispondenza diretta tra le fasi concettuali e i moduli software. Il
+sistema espone così un'unica interfaccia orchestratrice per l'intero ciclo di
+elaborazione, consentendo di modificare o estendere la logica di una specifica
+fase intervenendo esclusivamente sul mixin dedicato, senza impattare sugli altri
+componenti.
 
 \begin{lstlisting}[
     language=Python,
@@ -1164,12 +1234,12 @@ class BulkDatasetGenerator(
     ProgressMixin,
     OutputMixin,
 ):
-    # parameters
+    # ...
 \end{lstlisting}
 
-Ciascun mixin realizza una o più delle fasi appena introdotte a livello di
-design, incapsulando le chiamate di rete o coordinando la logica di più fasi
-quando queste sono strettamente collegate tra loro:
+Ciascun mixin realizza una o più delle fasi introdotte a livello di design,
+incapsulando le chiamate di rete o coordinando la logica di più fasi quando
+queste sono strettamente collegate tra loro:
 
 \begin{itemize}
     \item \texttt{FilterApiMixin} incapsula le chiamate di rete verso l'API
@@ -1219,13 +1289,16 @@ def _is_aborted(self) -> bool:
     return self._abort_event.is_set()
 \end{lstlisting}
 
-Il controllo combina due meccanismi. Il primo è l'evento di sincronizzazione
-interno \texttt{\_abort\_event}, che rappresenta lo stato di interruzione del
-run. Il secondo è lo stato dell'interfaccia Streamlit, dal quale viene letto il
-valore di \texttt{session\_state["abort\_generation"]}. Quando l'utente richiede
-l'interruzione, il metodo imposta l'evento interno; le chiamate successive
-possono quindi rilevare direttamente tale stato senza dover interrogare
-nuovamente l'interfaccia.
+Il controllo appena citato combina due meccanismi:
+\begin{itemize}
+    \item l'evento di sincronizzazione interno \texttt{\_abort\_event}, che
+          rappresenta lo stato di interruzione del run
+    \item  lo stato dell'interfaccia Streamlit, dal quale viene letto il valore
+          di \texttt{session\_state["abort\_generation"]}
+\end{itemize}
+Quando l'utente richiede l'interruzione, il metodo imposta l'evento interno; le
+chiamate successive possono quindi rilevare direttamente tale stato senza dover
+interrogare nuovamente l'interfaccia.
 
 Il controllo dello stato di Streamlit viene eseguito soltanto quando
 l'esecuzione è configurata come interrompibile, tramite
@@ -1262,67 +1335,96 @@ tentativi consecutivi senza successo oltre la quale il campionamento viene
 interrotto. A questi si aggiungono i parametri relativi alla resilienza delle
 chiamate di rete, costituiti da un timeout di base di 15 secondi, fino a due
 ripetizioni in caso di fallimento e un secondo di attesa tra un tentativo e
-l'altro.
+l'altro (NON presenti nel \cref{lst:mixin}).
 
-\subsection{Scoperta della mappa del grafo}
+\subsection{Costruzione e indicizzazione della mappa del grafo}
 \label{sec:impl-discovery}
 
-Prima di generare qualunque record, il sistema costruisce un'unica mappa
-completa delle proprietà e delle relazioni disponibili per ciascuna entità dello
-schema, interrogando l'API interna della piattaforma CVL. Questa mappa viene
-costruita una sola volta e riutilizzata per l'intera esecuzione, evitando di
-ripetere le stesse chiamate di rete ogni volta che un'entità già scoperta viene
-esplorata di nuovo. Il dettaglio implementativo di come l'API venga interrogata
-non è discusso in questa sede, trattandosi di un'interfaccia della piattaforma
-CVL e non di un contributo originale di questa tesi; qui rileva solo il
-risultato che il generatore ne ricava, riportato in forma semplificata nel
-\cref{lst:graph-map}: per ogni entità, l'insieme delle sue proprietà filtrabili
-(\texttt{properties}) e delle entità verso cui può proseguire una relazione
-(\texttt{relations}).
+Per evitare che l'esplorazione dello schema sia vincolata dai tempi di latenza
+dell'I/O di rete, la fase di avvio esegue una scansione preliminare
+dell'ontologia tramite il modulo \texttt{DiscoveryMixin}. Il risultato viene
+strutturato in un dizionario Python in memoria (\texttt{graph\_map}), che agisce
+da cache offline locale per l'intera esecuzione.
 
-\begin{lstlisting}[language=Python, caption={Struttura semplificata della mappa del grafo, ridotta a titolo esemplificativo a una sola proprietà e una sola relazione dell'entità Patient.}, label={lst:graph-map}]
-graph_map = { "properties": { "Patient": [ { "predicate": {"value":
-    "has_gender", "label": "gender"}, "datatype": "string", "n_values": 2,
-    "values": [ {"value": "F", "label": "Female"}, {"value": "M", "label":
-    "Male"}, ], }, ], }, "relations": { "Patient": [ {"predicate": {"value":
-    "has_diagnosis", "label": "diagnosis"}, "target": {"value": "Diagnosis",
-    "label": "Diagnosis"}}, ], }, }
+Come mostrato nel \cref{lst:graph-map}, l'implementazione organizza i dati
+mediante due tabelle hash annidate, create separatamente per le proprietà
+filtrabili e per le relazioni uscenti di ciascuna classe.
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Struttura della mappa del grafo memorizzata in \texttt{graph\_map}.},
+    label={lst:graph-map}
+]
+graph_map = {
+    "properties": {
+        "Patient": [
+            {
+                "predicate": {"value": "has_gender", "label": "gender"},
+                "datatype": "string",
+                "n_values": 2,
+                "values": [
+                    {"value": "F", "label": "Female"},
+                    {"value": "M", "label": "Male"}
+                ]
+            }
+        ]
+    },
+    "relations": {
+        "Patient": [
+            {
+                "predicate": {"value": "has_diagnosis", "label": "diagnosis"},
+                "target": {"value": "Diagnosis", "label": "Diagnosis"}
+            }
+        ]
+    }
+}
 \end{lstlisting}
 
-Ogni proprietà filtrabile porta con sé, oltre al predicato che la identifica, il
-tipo di dato, il numero di valori distinti disponibili (\texttt{n\_values}) e i
-valori stessi, già raccolti in questa fase (fino al tetto
-\texttt{MAX\_STORED\_VALUES} descritto più sotto); ogni relazione porta invece
-il predicato usato per il salto e l'entità di destinazione (\texttt{target}).
+La scelta di questa struttura dati e le relative modalità di popolamento
+rispondono a tre precise esigenze implementative:
 
-La scelta di indicizzare entrambe le sezioni per nome di entità, invece di usare
-una singola lista di record, non è casuale. La mappa viene infatti interrogata
-ripetutamente durante la scoperta delle route (\cref{sec:impl-routes}), una
-volta per ciascuna entità di volta in volta esplorata, e un dizionario permette
-di recuperare le proprietà o le relazioni di una data entità in tempo costante,
-invece di dover scorrere l'intera struttura ogni volta.
+\begin{itemize}
+    \item \textbf{Accesso in tempo costante $\mathcal{O}(1)$ durante la DFS:}
+          Durante la ricerca in profondità dei percorsi (\cref{sec:impl-routes}),
+          l'indicizzazione per chiave di entità consente l'estrazione immediata di
+          proprietà e relazioni, evitando la scansione sequenziale di una lista
+          globale ($\mathcal{O}(N)$).
 
-Costruire la mappa una volta sola, prima di iniziare qualunque generazione,
-comporta anche un compromesso più ampio. Quando viene aperta, ogni entità viene
-interrogata come punto di partenza isolato, con una storia di selezione vuota,
-indipendentemente dal fatto che nell'esplorazione vera delle route quella stessa
-entità venga poi raggiunta attraverso un percorso diretto o attraverso più salti
-relazionali. La mappa assume quindi che le proprietà e le relazioni disponibili
-per un'entità dipendano solo dal suo tipo, non dal percorso concreto con cui la
-si raggiunge, a differenza dell'API del CVL, che può restituire relazioni
-diverse a seconda della storia di selezione accumulata fino a quel punto. Questo
-costo viene accettato deliberatamente, perché l'alternativa, interrogare l'API
-da capo ogni volta che una qualunque entità viene esplorata, è proprio il collo
-di bottiglia che si vuole evitare.
+    \item \textbf{Gestione della memoria (\texttt{MAX\_STORED\_VALUES}):} Per i
+          campi ad alta cardinalità (es. misurazioni continue), il
+          \texttt{DiscoveryMixin} applica un limite rigido alla lista \texttt{values},
+          memorizzando unicamente un campionario rappresentativo per la successiva
+          fase di iniezione.
 
-Per ridurre il tempo complessivo di questa fase, le interrogazioni relative alle
-diverse opzioni di una stessa entità vengono eseguite in parallelo, fino a un
-massimo configurabile per volta (\texttt{MAX\_DISCOVERY\_WORKERS}), tramite un
-pool di thread; i valori restituiti per ciascuna proprietà filtrabile vengono
-conservati fino a un tetto massimo (\texttt{MAX\_STORED\_VALUES}), per non
-tenere in memoria un elenco potenzialmente enorme quando un campo ammette
-moltissimi valori distinti.
+    \item \textbf{Parallelizzazione dell'I/O
+              (\texttt{MAX\_DISCOVERY\_WORKERS}):} Poiché le chiamate REST per la scoperta
+          delle singole entità sono operazioni indipendenti, il recupero iniziale
+          viene velocizzato sfruttando un pool di thread tramite
+          \texttt{concurrent.futures.ThreadPoolExecutor}.
+\end{itemize}
 
+L'uso di una mappa statica introduce un'approssimazione di dominio: il sistema
+assume che le proprietà di una classe dipendano unicamente dal suo tipo e non
+dalla sequenza di salti relazionali con cui viene raggiunta. L'API di CVL, al
+contrario, adotta un comportamento dinamico che mostra o nasconde determinati
+vincoli in base allo storico della selezione.
+
+Questa scelta progettuale è stata deliberatamente accettata a seguito di
+un'analisi di fattibilità:
+
+\begin{itemize}
+    \item \textbf{Abbattimento della latenza di rete:} Senza la mappa in
+          memoria, ogni nodo della DFS richiederebbe un'interrogazione HTTP sincrona.
+          Nelle strutture ad alta complessità combinatoria, il volume di chiamate
+          aumenterebbe in modo moltiplicativo, portando i tempi di generazione da
+          pochi minuti a diverse ore con un alto rischio di timeout.
+
+    \item \textbf{Impatto marginale sulla copertura (\hyperref[obj:O1]{O1}):} La
+          mancata tracciabilità del contesto dinamico priva il sistema solo di
+          predicati altamente specialistici legati a combinazioni rare, preservando
+          appieno la rappresentazione delle query più frequenti e rilevanti per il
+          dominio clinico.
+\end{itemize}
 \subsection{Costruzione delle route}
 \label{sec:impl-routes}
 
