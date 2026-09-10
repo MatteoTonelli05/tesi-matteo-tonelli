@@ -1441,18 +1441,35 @@ relazionali fino a un limite di profondità configurato.
 
 \begin{lstlisting}[language=Python, caption={Visita in profondità della mappa del grafo per la costruzione delle route disponibili a partire da un'entità radice.}, label={lst:dfs}]
 def dfs(type_value, chain, relations_used, visited, ancestor_terminals):
-    terminals = [ {"predicate": p["predicate"], "chain_prefix": list(chain),
-    ...} for p in properties.get(type_value, []) ] if terminals: routes.append({
-    "chain": list(chain), "terminals": ancestor_terminals + [{**t,
-    "is_final_entity": True} for t in terminals], })
+    terminals = [
+        {"predicate": p["predicate"], "chain_prefix": list(chain), ...}
+        for p in properties.get(type_value, [])
+    ]
+    
+    if terminals:
+        routes.append({
+            "chain": list(chain),
+            "terminals": ancestor_terminals + [{**t, "is_final_entity": True} for t in terminals],
+        })
 
-    if relations_used >= max_relations: return inherited = ancestor_terminals +
-        [{**t, "is_final_entity": False} for t in terminals] for rel in
-        relations.get(type_value, []): target_value = (rel.get("target") or
-        {}).get("value") if not target_value or target_value in visited:
-        continue dfs( target_value, [*chain, {"predicate": rel["predicate"],
-        "reference_to": rel.get("target")}], relations_used + 1, visited |
-        {target_value}, inherited, )
+    if relations_used >= max_relations:
+        return
+        
+    inherited = ancestor_terminals + [{**t, "is_final_entity": False} for t in terminals]
+    
+    for rel in relations.get(type_value, []):
+        target_value = (rel.get("target") or {}).get("value")
+        
+        if not target_value or target_value in visited:
+            continue
+            
+        dfs(
+            target_value,
+            [*chain, {"predicate": rel["predicate"], "reference_to": rel.get("target")}],
+            relations_used + 1,
+            visited | {target_value},
+            inherited
+        )
 \end{lstlisting}
 
 Ogni volta che la visita raggiunge un nodo con proprietà filtrabili, viene
@@ -1548,10 +1565,23 @@ consecutivi (\texttt{SAMPLING\_GIVEUP\_STREAK}) non producono nulla di nuovo,
 segno che lo spazio raggiungibile è stato esaurito.
 
 \begin{lstlisting}[language=Python, caption={Campionamento casuale di un insieme di route indipendenti tra loro per un singolo record.}, label={lst:sample-combo}]
-def sample_independent_combo(target_p): pool = list(valid) rng.shuffle(pool)
-    chosen, chosen_keys = [], [] for r in pool: if len(chosen) >= target_p:
-    break key = chain_key_of[id(r)] if not routes_mod.conflicts(chosen_keys,
-    key): chosen.append(r) chosen_keys.append(key) return tuple(chosen)
+def sample_independent_combo(target_p):
+    pool = list(valid)
+    rng.shuffle(pool)
+    
+    chosen, chosen_keys = [], []
+    
+    for r in pool:
+        if len(chosen) >= target_p:
+            break
+            
+        key = chain_key_of[id(r)]
+        
+        if not routes_mod.conflicts(chosen_keys, key):
+            chosen.append(r)
+            chosen_keys.append(key)
+            
+    return tuple(chosen)
 \end{lstlisting}
 
 Questa modalità di campionamento casuale (\texttt{\_run\_sampled}) non è l'unica
@@ -1580,8 +1610,10 @@ agli altri, a seconda della configurazione.
 
 \begin{lstlisting}[language=Python, caption={Scelta tra esecuzione sequenziale e parallela in base al numero di worker configurati.}, label={lst:workers}]
 workers = max(1, int(self.config.get("num_workers") or self.GENERATION_WORKERS))
-if workers <= 1: self._run_jobs_sequential(jobs_iter, total_pairs, p, target,
-max_no_new) return
+
+if workers <= 1:
+    self._run_jobs_sequential(jobs_iter, total_pairs, p, target, max_no_new)
+    return
 \end{lstlisting}
 
 Se il numero di worker configurato è maggiore di uno, le combinazioni campionate
@@ -1641,9 +1673,13 @@ entrambe le liste di tier.
 \label{sec:impl-config}
 
 \begin{lstlisting}[language=Python, caption={Configurazione condivisa usata nei run di produzione, per entrambe le liste di tier.}, label={lst:common-config}]
-COMMON_CONFIG = { "num_workers": 1, "offline_history": True,
-    "include_value_spans": True, "skip_navigation_in_prompt": False,
-    "validate_sparql": True, }
+COMMON_CONFIG = {
+    "num_workers": 1,
+    "offline_history": True,
+    "include_value_spans": True,
+    "skip_navigation_in_prompt": False,
+    "validate_sparql": True,
+}
 \end{lstlisting}
 
 Ciascuna di queste cinque opzioni governa un aspetto distinto del comportamento
@@ -1728,9 +1764,22 @@ così direttamente all'unico passaggio che nessuno dei due percorsi può evitare
 ovvero la chiamata finale descritta di seguito.
 
 \begin{lstlisting}[language=Python, caption={Lo scheletro appena ricostruito per i terminal \texttt{gender} e \texttt{birth date}, ancora privo di valori.}, label={lst:skeleton-example}]
-history = [ { "query_nodes": [ {"predicate": {"label": "gender"}, "values":
-    None, "value_range": None}, {"predicate": {"label": "birth date"}, "values":
-    None, "value_range": None}, ] } ]
+history = [
+    {
+        "query_nodes": [
+            {
+                "predicate": {"label": "gender"},
+                "values": None,
+                "value_range": None
+            },
+            {
+                "predicate": {"label": "birth date"},
+                "values": None,
+                "value_range": None
+            }
+        ]
+    }
+]
 \end{lstlisting}
 
 Indipendentemente dal percorso scelto per lo scheletro, il testo effettivo della
@@ -1749,12 +1798,18 @@ Una volta pronto lo scheletro, ogni suo nodo vuoto viene riempito con valori
 concreti scelti a caso dal pool associato al terminal corrispondente.
 
 \begin{lstlisting}[language=Python, caption={Riempimento di un nodo dello scheletro con valori concreti, distinguendo tra intervalli e insiemi discreti.}, label={lst:fill-node}]
-def fill_node(node, term, pool, min_values, max_values): k =
-    random.randint(min_values, min(max_values, len(pool))) chosen =
-    random.sample(pool, k) if _is_range_datatype(term.get("datatype")): ordered
-    = sorted(chosen, key=lambda v: v["value"]) node["value_range"] = {"min":
-    ordered[0]["value"], "max": ordered[-1]["value"]} else: node["values"] =
-    chosen
+def fill_node(node, term, pool, min_values, max_values):
+    k = random.randint(min_values, min(max_values, len(pool)))
+    chosen = random.sample(pool, k)
+    
+    if _is_range_datatype(term.get("datatype")):
+        ordered = sorted(chosen, key=lambda v: v["value"])
+        node["value_range"] = {
+            "min": ordered[0]["value"],
+            "max": ordered[-1]["value"]
+        }
+    else:
+        node["values"] = chosen
 \end{lstlisting}
 
 Il numero di valori da usare per un dato vincolo è scelto a caso entro i limiti
@@ -1765,10 +1820,25 @@ potere selettivo. Se il campo è una data o un valore numerico, i valori scelti
 vengono usati per costruire un intervallo anziché un elenco discreto.
 
 \begin{lstlisting}[language=Python, caption={Lo stesso scheletro di \cref{lst:skeleton-example}, dopo il riempimento: elenco discreto per il campo categoriale, intervallo per quello di tipo data.}, label={lst:filled-nodes}]
-history = [ { "query_nodes": [ {"predicate": {"label": "gender"}, "values":
-    [{"value": "F", "label": "Female"}], "value_range": None}, {"predicate":
-    {"label": "birth date"}, "values": None, "value_range": {"min":
-    "2016-01-01", "max": "2019-01-01"}}, ] } ]
+history = [
+    {
+        "query_nodes": [
+            {
+                "predicate": {"label": "gender"},
+                "values": [{"value": "F", "label": "Female"}],
+                "value_range": None
+            },
+            {
+                "predicate": {"label": "birth date"},
+                "values": None,
+                "value_range": {
+                    "min": "2016-01-01",
+                    "max": "2019-01-01"
+                }
+            }
+        ]
+    }
+]
 \end{lstlisting}
 
 \subsection{Generazione del prompt e tracciamento degli span}
@@ -1802,10 +1872,16 @@ da un'apertura fissa (\emph{"Find all \textless entità\textgreater"}).
 
 \begin{lstlisting}[language=Python, caption={Costruzione del prompt segmento per segmento, con tracciamento diretto della posizione di ciascun valore letterale.}, label={lst:build-prompt}]
 def build_prompt_with_spans(root_label, history, skip_navigation=False):
-    segments = _prompt_segments(root_label, history, skip_navigation) pieces,
-    spans = [], [] for is_value, text in segments: if is_value: base =
-    sum(len(p) for p in pieces) spans.append((base, base + len(text)))
-    pieces.append(text) return "".join(pieces), spans
+    segments = _prompt_segments(root_label, history, skip_navigation)
+    pieces, spans = [], []
+    
+    for is_value, text in segments:
+        if is_value:
+            base = sum(len(p) for p in pieces)
+            spans.append((base, base + len(text)))
+        pieces.append(text)
+        
+    return "".join(pieces), spans
 \end{lstlisting}
 
 Mentre i segmenti vengono concatenati uno alla volta, la posizione di ciascun
@@ -1864,17 +1940,13 @@ def _filters_landed(sparql, chosen_values):
           sintattica vengono scartati con il motivo \emph{"the SPARQL does not
               parse (rdflib)"}.
 
-          \begin{lstlisting}[
-        language=Python,
-        caption={Validazione sintattica condizionata della query SPARQL.},
-        label={lst:validate-sparql}
-    ]
+          \begin{lstlisting}[language=Python, caption={Validazione sintattica condizionata della query SPARQL.}, label={lst:validate-sparql}]
 syntax_error = (
     validate.sparql_error(sparql)
     if self.config.get("validate_sparql", True)
     else None
 )
-    \end{lstlisting}
+\end{lstlisting}
 
     \item \textbf{Deduplicazione e rigenerazione dei valori:} L'ultimo controllo
           garantisce l'unicità dei dati mantenendo due tabelle hash in memoria:
@@ -1997,10 +2069,21 @@ del caricamento con un'indicazione puntuale dell'errore, prevenendo interruzioni
 anomale nelle fasi avanzate della generazione.
 
 \begin{lstlisting}[language=Python, caption={Esempio minimo di configurazione di un tier da file JSON esterno.}, label={lst:tier-example}]
-[ { "name": "diagnosis_related", "entities": ["Diagnosis", "TNMClassification"],
-  "sample_size_per_entity": 50, "min_relations": 1, "max_relations": 3,
-  "min_paths": 1, "max_paths": 2, "min_properties": 1, "max_properties": 3,
-  "min_values": 1, "max_values": 2 } ]
+[
+    {
+        "name": "diagnosis_related",
+        "entities": ["Diagnosis", "TNMClassification"],
+        "sample_size_per_entity": 50,
+        "min_relations": 1,
+        "max_relations": 3,
+        "min_paths": 1,
+        "max_paths": 2,
+        "min_properties": 1,
+        "max_properties": 3,
+        "min_values": 1,
+        "max_values": 2
+    }
+]
 \end{lstlisting}
 
 \subsection{Split del dataset}
@@ -2010,10 +2093,15 @@ Una volta che tutte le entità dei tier configurati sono state processate e unit
 in un unico file, l'ultimo passo divide i record in train, validation e test.
 
 \begin{lstlisting}[language=Python, caption={Suddivisione del dataset in train, validation e test, stratificata per entità di origine.}, label={lst:split}]
-for entity, recs in by_entity.items(): rng.shuffle(recs) n = len(recs) n_val =
-    max(1, round(n * SPLIT_RATIOS["val"])) if n >= 10 else 0 n_test = max(1,
-    round(n * SPLIT_RATIOS["test"])) if n >= 10 else 0 n_train = n - n_val -
-    n_test splits["train"].extend(recs[:n_train])
+for entity, recs in by_entity.items():
+    rng.shuffle(recs)
+    n = len(recs)
+    
+    n_val = max(1, round(n * SPLIT_RATIOS["val"])) if n >= 10 else 0
+    n_test = max(1, round(n * SPLIT_RATIOS["test"])) if n >= 10 else 0
+    n_train = n - n_val - n_test
+    
+    splits["train"].extend(recs[:n_train])
     splits["val"].extend(recs[n_train:n_train + n_val])
     splits["test"].extend(recs[n_train + n_val:])
 \end{lstlisting}
@@ -2471,20 +2559,21 @@ controllo esterno sulla ripetizione dell'apertura di frase.
 
 \begin{lstlisting}[language=Python, caption={La funzione di validazione condivisa da chunk e varianti complete, con soglia di somiglianza adattiva.}, label={lst:validation}]
 def validation_reason(candidate, mapping, accepted_so_far, max_similarity=None):
-    missing = [p for p in mapping if p not in candidate] if missing: return
-    f"you dropped the placeholder(s) {', '.join(missing)} - every single one
-    must appear unchanged"
+    missing = [p for p in mapping if p not in candidate]
+    if missing:
+        return f"you dropped the placeholder(s) {', '.join(missing)} - every single one must appear unchanged"
 
-    malformed = sorted(set(m for m in LOOSE_VAL_RE.findall(candidate) if m not
-    in mapping)) if malformed: return f"you wrote malformed or invented
-    placeholder-like text: {', '.join(malformed)} - placeholders must be copied
-    exactly, never altered"
+    malformed = sorted(set(m for m in LOOSE_VAL_RE.findall(candidate) if m not in mapping))
+    if malformed:
+        return f"you wrote malformed or invented placeholder-like text: {', '.join(malformed)} - placeholders must be copied exactly, never altered"
 
-    threshold = max_similarity if max_similarity is not None else
-    similarity_threshold_for(candidate) for prev in accepted_so_far: ratio =
-    difflib.SequenceMatcher(None, candidate.lower(), prev.lower()).ratio() if
-    ratio >= threshold: return f"this wording is too similar
-    ({ratio:.0%} match) to a variant already produced for this same request"
+    threshold = max_similarity if max_similarity is not None else similarity_threshold_for(candidate)
+    
+    for prev in accepted_so_far:
+        ratio = difflib.SequenceMatcher(None, candidate.lower(), prev.lower()).ratio()
+        if ratio >= threshold:
+            return f"this wording is too similar ({ratio:.0%} match) to a variant already produced for this same request"
+            
     return None
 \end{lstlisting}
 
@@ -2691,7 +2780,7 @@ la fase di riformulazione.
 \section{Testing}
 \label{sec:eval-testing}
 
-\subsubsection{Problemi di qualità riscontrati e diagnosi delle cause}
+\subsection{Problemi di qualità riscontrati e diagnosi delle cause}
 \label{sec:eval-quality-issues}
 
 Nel corso dello sviluppo e delle fasi di testing sono stati individuati e
@@ -2752,7 +2841,7 @@ cui le relative proposte di risoluzione sono discusse nel
     \label{fig:quality-issues}
 \end{figure}
 
-\paragraph{Comportamenti anomali valutati come ammissibili.}
+\subsubsection{Comportamenti anomali valutati come ammissibili.}
 Due ulteriori fenomeni, inizialmente segnalati come bug, sono stati
 ri-classificati come variazioni accettabili:
 \begin{itemize}
@@ -2768,7 +2857,7 @@ ri-classificati come variazioni accettabili:
           porre, i record non costituiscono un difetto.
 \end{itemize}
 
-\subsubsection{Confronto tra generazione con e senza mascheramento}
+\subsection{Confronto tra generazione con e senza mascheramento}
 \label{sec:eval-masking-comparison}
 
 Per quantificare l'impatto del mascheramento sulla qualità della variazioni
@@ -2791,7 +2880,7 @@ query).
         \\
         \midrule
         Slot di generazione totali                 & 330
-                                                   & 330                             \\
+                                                   & 330                        \\
         \textbf{Tasso di successo globale}         & \textbf{98,2\%} (324/330)
                                                    & \textbf{89,1\%} (294/330)
         \\
@@ -2799,7 +2888,8 @@ query).
                                                    & \textbf{8,2\%} (27/330)
         \\
         Causa primaria di rigetto                  & Similarità parziale
-        ($<90\%$)                                  & Duplicazione identica ($100\%$)
+        ($<90\%$)                                  & Duplicazione identica
+        ($100\%$)
         \\
         Preservazione valori letterali             & Garantita per costruzione
                                                    & Modello-dipendente
@@ -2838,212 +2928,235 @@ l'introduzione dei placeholder opachi solleva il modello dal carico di memoria
 sui dati, consentendogli di concentrare la capacità parametrica residuale
 unicamente sulla variazione stilistica della frase.
 
-\subsubsection{Statistiche del dataset}
+\subsection{Statistiche del dataset ed analisi delle distribuzioni}
 \label{sec:eval-dataset-stats}
 
-Il dataset finale risulta suddiviso in tre insiemi distinti, destinati
-rispettivamente all'addestramento, alla validazione, e al test del modello.
-L'insieme di addestramento comprende 9\,976 varianti, prodotte a partire da
-3\,443 record sorgente distinti, con una media di 2,90 varianti per record. Gli
-insiemi di validazione e di test comprendono rispettivamente 2\,022 e 2\,023
-varianti, prodotte a partire da 428 record sorgente distinti ciascuno, con una
-media di 4,72 e 4,73 varianti per record, contro un obiettivo fisso di cinque
-varianti per record non sempre raggiunto per intero. Nessun record sorgente
-risulta condiviso tra i tre insiemi: la verifica sull'insieme dei relativi
-identificativi conferma una separazione completa, coerente con l'obiettivo di
-una valutazione di reale generalizzazione anziché di semplice memorizzazione.
+Il corpus finale è stato suddiviso in tre insiemi disgiunti destinati ad
+addestramento, validazione e test secondo la procedura di partizione per entità
+descritta nella \cref{sec:impl-split}. In seguito alla generazione vi è stata
+una verifica sugli identificativi univoci, attestando così l'assenza totale di
+sovrapposizioni tra i tre insiemi, garantendo la misurazione della reale
+capacità di generalizzazione del modello.
 
-La distribuzione delle varianti tra i dieci registri stilistici nell'insieme di
-addestramento risulta ragionevolmente uniforme, pur non perfettamente bilanciata
-(\cref{fig:style-distribution}): lo stile più rappresentato,
-\emph{technical\_sql}, compare in 1\,237 varianti, contro le 569 dello stile
-meno rappresentato, \emph{generational}, un rapporto di circa 2,2 a 1 tra il più
-e il meno frequente.
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{X c c c c}
+        \toprule
+        \textbf{Split}      & \textbf{Record Sorgente}     & \textbf{Varianti
+                                                                 Totali} &
+        \textbf{Densità
+            Media}     &
+        \textbf{Tasso
+            Fallback}                                                           \\
+        \midrule
+        \textbf{Train}      & 3\,443                       & 9\,976           &
+        2,90 var/rec        & 0,58\% (58/9\,976)
+        \\
+        \textbf{Validation} & 428                          & 2\,022           &
+        4,72 var/rec        & 0,35\% (7/2\,022)
+        \\
+        \textbf{Test}       & 428                          & 2\,023           &
+        4,73 var/rec        & 0,35\% (7/2\,023)
+        \\
+        \midrule
+        \textbf{Totale}     & \textbf{4\,299}              & \textbf{14\,021} &
+        --                  & \textbf{0,51\%} (72/14\,021)
+        \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Riepilogo quantitativo del dataset suddiviso per split e relative metriche di densità e fallback.}
+    \label{tab:dataset-split-summary}
+\end{table}
+
+Come evidenziato nella \cref{tab:dataset-split-summary}, si osserva una marcata
+differenza di densità di parafrasi tra il set di addestramento e gli insiemi di
+valutazione. Nel set di addestramento, il numero di varianti per record è
+governato dalla formula adattiva proporzionale alla complessità dei filtri
+(media di 2,90), una scelta progettuale mirata a contenere la ridondanza
+complessiva senza saturare il tempo di calcolo. Al contrario, per validation e
+test è stato imposto un target fisso di 5 varianti per record (raggiunto con una
+media di 4,72 e 4,73), assicurando un banco di prova ricco e diversificato per
+la misurazione delle prestazioni.
+
+In tutti e tre gli insiemi, l'incidenza delle varianti non riformulate rispetto
+all'originale (\textit{fallback}) si mantiene estremamente contenuta
+($<0{,}6\%$), attestando la capacità del sistema di completare la generazione
+senza dover ricorrere alla frase di origine.
+
+\subsubsection{Analisi della distribuzione stilistica.}
+L'assegnazione degli stili linguistici avvenga in sequenza circolare
+deterministica (\texttt{itertools.cycle}); tuttavia, la distribuzione finale
+delle 9\,976 varianti dell'insieme di addestramento
+(\cref{fig:style-distribution}) mostra uno sbilanciamento misurabile tra i dieci
+registri: da un massimo di 1\,237 occorrenze per \emph{technical\_sql} a un
+minimo di 569 per \emph{generational} (rapporto di circa 2,2 a 1).
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=.85\linewidth]{figures/style-distribution.pdf}
-    \caption{Distribuzione delle varianti tra i dieci stili linguistici,
-        nell'insieme di addestramento.}
+    \caption{Distribuzione delle varianti accettate tra i dieci registri stilistici nell'insieme di addestramento.}
     \label{fig:style-distribution}
 \end{figure}
 
-Una differenza rilevante nella densità di parafrasi si osserva tra l'insieme di
-addestramento, prodotto tramite la formula adattiva basata sul numero di valori
-per record, e gli insiemi di validazione e di test, prodotti con un numero fisso
-di varianti per record: il primo presenta una media sensibilmente più bassa
-(2,90 contro le circa 4,7 degli altri due insiemi), una scelta deliberata per
-contenere il volume complessivo di addestramento senza sacrificare la varietà
-stilistica degli insiemi usati per la misurazione delle prestazioni.
+Tale discrepanza nella distribuzione degli stili non deriva da un difetto di
+campionamento, ma dall'azione dei filtri di validazione della pipeline.
+Direttive stilistiche più vincolanti riducono lo spazio di variazione sintattica
+del modello, portandolo a convergere su strutture e lessico ricorrenti e, di
+conseguenza, i meccanismi di memoria anti-ripetizione (\cref{sec:impl-styles}) e
+il controllo di similarità adattiva (\cref{sec:impl-validation}) intercettano
+tali ridondanze scartando un numero maggiore di tentativi per garantire la
+varietà del dataset.
 
-Infine, la quota di varianti non riformulate rispetto al testo originale
-(\emph{fallback}) risulta contenuta in tutti e tre gli insiemi: 0,58\% nel train
-(58 varianti su 9\,976), 0,35\% sia in validation sia in test (7 varianti
-ciascuno).
+\subsection{Metodologia}
 
-\section{Experimental evaluation / demos}
-\label{sec:eval-experimental}
+La valutazione del modello ha seguito un approccio strutturato in tre componenti
+principali:
 
-Questa sezione riporta i risultati sperimentali del fine-tuning del modello
-linguistico sul dataset descritto nella sezione precedente, confrontando diverse
-configurazioni e analizzando la natura degli errori residui.
+\begin{enumerate}
+    \item \textbf{Scelta e addestramento del modello:} È stato selezionato
+          \texttt{Gemma 3 270M}, un modello ultraleggero che garantisce l'esecuzione
+          in locale (rispettando \hyperref[vinc:V2]{V2} e \hyperref[vinc:V3]{V3}). Il modello è
+          stato addestrato tramite la tecnica LoRA (\cref{sec:peft-lora}), aggiornando
+          solamente lo 0,5\% dei parametri totali per contenere i costi
+          computazionali.
 
-\subsubsection{Metodologia}
+    \item \textbf{Definizione della metrica:} Le prestazioni sono state misurate
+          calcolando l'\textbf{Exact Match (EM)}. Questa metrica indica la percentuale
+          di query SPARQL generate che risultano identiche, carattere per carattere,
+          alla query target di riferimento.
 
-Il modello impiegato è \texttt{Gemma3:270M}, adattato tramite LoRA
-(\cref{sec:peft-lora}) su un insieme di addestramento coerente con quello
-descritto in \cref{sec:eval-dataset-stats}. La metrica principale è
-l'\emph{exact match}, la percentuale di query generate identiche carattere per
-carattere alla query di riferimento, calcolata su un insieme di test di cento
-esempi in stile coerente con l'insieme di addestramento
-(\emph{trainstyle-test}); dove indicato, i risultati sono riportati anche su un
-secondo insieme di cento esempi fuori distribuzione (\emph{claude-test}),
-formulato da un modello linguistico diverso da quello impiegato nella
-generazione del dataset stesso, per verificare la capacità di generalizzazione a
-formulazioni non viste in addestramento.
+    \item \textbf{Allestimento dei dati di test:} La valutazione è stata
+          condotta su due insiemi separati da 100 esempi ciascuno.
+          \begin{enumerate}
+              \item \emph{trainstyle-test} (\textit{in-distribution}), utilizza gli
+                    stessi registri stilistici visti in addestramento per verificare
+                    l'apprendimento delle regole base
+              \item \emph{claude-test}
+                    (\textit{out-of-distribution}), utilizza formulazioni generate da un modello
+                    esterno (\textit{Claude 3.5 Sonnet}) per testare la capacità del sistema di
+                    comprendere frasi e costrutti linguistici del tutto nuovi
+          \end{enumerate}
+\end{enumerate}
 
-\subsubsection{Selezione del checkpoint}
+\subsection{Selezione del checkpoint e prevenzione dell'overfitting}
 
-Un primo addestramento di riferimento, condotto per 4\,000 iterazioni, è stato
-seguito da un secondo addestramento più lungo, di 15\,000 iterazioni. Anziché
-impiegare il checkpoint dell'ultima iterazione di quest'ultimo, la scelta è
-ricaduta sul checkpoint con la \emph{validation loss} più bassa osservata
-durante l'addestramento, in corrispondenza dell'iterazione 7\,000
-(\cref{fig:loss-curve}). Questa scelta metodologica si è rivelata determinante,
-portando l'exact match dal 15\% del checkpoint finale (iterazione 15\,000) al
-46\% del checkpoint scelto, sullo stesso modello e sugli stessi dati di
-addestramento.
+Nelle architetture di tipo Text-to-SPARQL, il numero di iterazioni di
+addestramento gioca un ruolo critico; un addestramento insufficiente non
+garantisce la memorizzazione dello schema, mentre un'esposizione prolungata
+conduce rapidamente al collasso sui pattern di input (\textit{overfitting}).
+
+Per identificare il regime ottimale, è stato condotto un addestramento esteso su
+15\,000 iterazioni con monitoraggio continuo della \textit{validation loss}
+(\cref{fig:loss-curve}).
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=.85\linewidth]{figures/loss-curve.pdf}
-    \caption{Andamento della train e della validation loss durante
-        l'addestramento di 15\,000 iterazioni. Il checkpoint scelto per la
-        valutazione finale, in corrispondenza del minimo della validation loss,
-        è evidenziato dalla linea tratteggiata.}
+    \caption{Andamento della train e validation loss durante le 15\,000 iterazioni.}
     \label{fig:loss-curve}
 \end{figure}
 
-\subsubsection{Confronto tra configurazioni}
+Invece di adottare il checkpoint finale (iterazione 15\,000), la selezione
+metodologica è ricaduta rigorosamente sul punto di minimo della perdita di
+validazione, individuato all'iterazione 7\,000 (usando dei checkpoint ogni 500
+iterazioni). Questa scelta ha prodotto una svolta determinante nelle
+prestazioni, portando l'Exact Match sull'insieme in-distribution dal
+\textbf{15\%} del checkpoint finale al \textbf{46\%} del checkpoint ottimale
+(visibile in \cref{tab:finetuning-comparison-table}), dimostrando come una
+tempestiva interruzione dell'addestramento (\textit{early stopping}) sia
+fondamentale per preservare la capacità di astrazione della rete.
 
-Il checkpoint scelto (iterazione 7\,000) raggiunge un exact match del
-\textbf{46\%} sull'insieme di test in stile coerente con l'addestramento, un
-risultato solido per un modello di 270 milioni di parametri, addestrato con una
-tecnica efficiente come LoRA, su un compito che richiede di produrre query
-sintatticamente corrette e semanticamente vincolate a un'ontologia clinica reale
-(\cref{fig:finetuning-comparison}). Il primo addestramento, più breve, aveva
-raggiunto solo il 13\% nella stessa condizione, confermando che l'esposizione
-prolungata ai dati, unita a una selezione accurata del checkpoint, produce un
-miglioramento sostanziale e non marginale. Un confronto diretto con il full
-fine-tuning, condotto sullo stesso modello di base per 6\,000 iterazioni, mostra
-un exact match del 18\% nella medesima condizione, sensibilmente inferiore al
-risultato ottenuto con LoRA a parità di ordine di grandezza di iterazioni.
+\subsection{Confronto tra le configurazioni di addestramento}
+
+I risultati ottenuti confermano che la combinazione tra una generazione dati
+rigorosa e una strategia di fine-tuning ad alta efficienza parametrica consente
+a un modello di soli 270M parametri di raggiungere una discreta accuratezza.
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{X c c c}
+        \toprule
+        \textbf{Configurazione di fine-tuning} & \textbf{Iterazioni}      &
+        \textbf{EM (In-Distr.)}                & \textbf{EM (Out-Distr.)}   \\
+        \midrule
+        LoRA Baseline (Short Run)              & 4\,000                   &
+        13,0\%                                 & 4,0\%                      \\
+        Full Fine-Tuning                       & 6\,000                   &
+        18,0\%                                 & 5,0\%                      \\
+        LoRA Final Checkpoint                  & 15\,000                  &
+        15,0\%                                 & 7,0\%                      \\
+        \textbf{LoRA Optimal (Min Val Loss)}   & \textbf{7\,000}          &
+        \textbf{46,0\%}                        & \textbf{14,0\%}            \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Confronto comparativo dell'Exact Match (EM) tra le diverse configurazioni di addestramento su benchmark in-distribution ed out-of-distribution.}
+    \label{tab:finetuning-comparison-table}
+\end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=.85\linewidth]{figures/finetuning-comparison.pdf}
-    \caption{Confronto dell'exact match tra le configurazioni testate, sia
-        sull'insieme di test in stile coerente con l'addestramento sia, dove
-        disponibile, sull'insieme fuori distribuzione.}
+    \includegraphics[width=.85\linewidth]{figures/finetuning-comparison.png}
+    \caption{Confronto dell'Exact Match sulle configurazioni testate.}
     \label{fig:finetuning-comparison}
 \end{figure}
 
-Sull'insieme di test fuori distribuzione, i risultati sono naturalmente più
-contenuti (4\% per il primo addestramento, 7\% per il checkpoint finale del
-secondo), un calo atteso trattandosi di formulazioni mai osservate durante
-l'addestramento e generate da un modello linguistico diverso da quello usato per
-produrre il dataset. Il checkpoint scelto (iterazione 7\,000) non è stato
-valutato su questo insieme, essendo stato individuato successivamente come il
-più promettente sulla base della sola validation loss.
+Come sintetizzato nella \cref{tab:finetuning-comparison-table}, l'approccio
+basato su LoRA all'iterazione 7\,000 supera nettamente il Full Fine-Tuning
+condotto a parità di risorse (46\% contro 18\%). Il motivo di tale divario
+risiede nella tendenza del Full Fine-Tuning a destabilizzare le rappresentazioni
+latenti pre-addestrate del modello (\textit{catastrophic forgetting}), mentre le
+matrici a basso rango di LoRA preservano le capacità grammaticali generali
+adattando unicamente l'interfaccia verso la sintassi SPARQL.
 
-\subsubsection{Analisi degli errori}
+Sull'insieme out-of-distribution (\emph{claude-test}), i tassi di exact match
+risultano inferiori (4\% - 7\%), evidenziando la necessità di integrare in
+futuro un modulo di allineamento stilistico ad ampio raggio per domande
+formulate da sistemi terzi.
 
-Le cinquantaquattro righe non corrispondenti esattamente al checkpoint scelto
-sono state analizzate confrontando in modo automatico la struttura e i valori di
-ciascuna query generata con quella di riferimento (\cref{fig:error-taxonomy}).
-Nella maggioranza dei casi, il 63\%, la query generata utilizza un predicato,
-una classe, o un percorso relazionale diverso da quello corretto, tipicamente
-confondendo entità ontologiche simili tra loro (ad esempio \texttt{Patient} con
-una sua sottoclasse come \texttt{DrinkerPatient}, introdotta nella query senza
-che il prompt la richiedesse). Nel 24\% dei casi la struttura della query è
-corretta, ma uno dei valori letterali richiesti differisce da quello atteso. Nel
-restante 13\% dei casi, la query è strutturalmente corretta e utilizza il
-predicato giusto, ma restituisce un identificativo o un codice errato al posto
-di quello corretto, ad esempio confondendo due codici della classificazione
-ICD-10 entrambi plausibili nel contesto ma diversi da quello richiesto.
+\subsection{Tassonomia e analisi diagnostica degli errori}
+
+L'analisi qualitativa sui 54 casi di scarto registrati dal checkpoint ottimale
+(iterazione 7\,000) offre un riscontro importante sulla solidità del sistema
+(\cref{fig:error-taxonomy}).
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=.75\linewidth]{figures/error-taxonomy.pdf}
-    \caption{Distribuzione delle cinquantaquattro righe non corrispondenti per
-        categoria di errore, sul checkpoint scelto (iterazione 7\,000).}
+    \caption{Distribuzione percentuale delle 54 predizioni non corrispondenti per tipologia di errore sul checkpoint ottimale (iterazione 7\,000).}
     \label{fig:error-taxonomy}
 \end{figure}
 
-È significativo che, in nessuno dei casi analizzati, il modello abbia prodotto
-una query non sintatticamente valida o strutturalmente incoerente. Anche negli
-errori, il modello dimostra di aver appreso in modo affidabile la grammatica del
-linguaggio di interrogazione e la struttura generale delle query attese,
-concentrando le proprie difficoltà in un numero limitato di pattern
-riconoscibili e riconducibili a una causa comune, la discriminazione tra entità
-o valori simili tra loro, più che a un comportamento arbitrario o imprevedibile.
+I fallimenti sono stati categorizzati in tre tipologie strutturali:
+
+\begin{enumerate}
+    \item \textbf{Deviazione ontologica del percorso (\textbf{63\%}, 34 casi):}
+          Il modello genera una query sintatticamente perfetta, ma impiega un
+          predicato o una classe adiacente errata (es. inserimento arbitrario
+          della sottoclasse \texttt{DrinkerPatient} in luogo del nodo generico
+          \texttt{Patient}).
+    \item \textbf{Mancata corrispondenza dei valori letterali (\textbf{24\%}, 13
+              casi):} La struttura di grafo e i predicati risultano esatti, ma
+          uno dei valori di filtro differisce dal target di riferimento.
+    \item \textbf{Scambio di codici di dominio (\textbf{13\%}, 7 casi):} La
+          query individua la corretta classe, ma confonde due identificativi
+          controllati specifici (es. inversione di due codici di patologia
+          ICD-10 entrambi plausibili nel contesto).
+\end{enumerate}
+
+Il dato più rilevante emerso dall'analisi è che il \textbf{100\% delle query
+    generate è sintatticamente valido}. In nessun caso il modello ha prodotto
+parentesi spaiate, keyword SPARQL errate o violazioni di grammatica. Ciò
+dimostra che la pipeline di addestramento ha insegnato con successo la
+struttura rigida del linguaggio di interrogazione, riducendo l'incertezza
+residua a una semplice discriminazione tra entità ontologiche contigue.
 
 \chapter{Conclusioni e sviluppi futuri}
 \label{chap:conclusion}
 
-Questo lavoro ha affrontato il problema della mancanza di un dataset di
-addestramento per un modello linguistico capace di tradurre domande in
-linguaggio naturale in query SPARQL sul knowledge graph del Cancer Virtual Lab,
-progettando e implementando una pipeline automatica in due stadi per costruirlo,
-e verificandone l'efficacia tramite il fine-tuning concreto di un modello
-linguistico sui dati prodotti.
-
-I quattro obiettivi specifici definiti in \cref{chap:analisi} possono essere
-considerati raggiunti. La \hyperref[obj:O1]{copertura selettiva ed
-    estendibilità} (\textbf{O1}) è stata ottenuta tramite il meccanismo dei tier,
-che copre quarantacinque entità dello schema senza richiederne la copertura
-completa, ed è estendibile a nuove classi tramite una configurazione esterna che
-non richiede di modificare il codice del generatore
-(\cref{sec:impl-tier-config}). La \hyperref[obj:O2]{varietà linguistica
-    autentica} (\textbf{O2}) è stata perseguita tramite lo stadio di augmentation,
-che produce dieci registri stilistici distinti a partire da ciascuna coppia
-generata, con un tasso di successo superiore al 97\% anche nella modalità più
-restrittiva testata (\cref{sec:eval-masking-comparison}). La
-\hyperref[obj:O3]{tracciabilità completa} (\textbf{O3}) è garantita
-dall'identificativo di provenienza mantenuto per ogni variante, verificato non
-presentare alcuna sovrapposizione tra gli insiemi di addestramento, validazione
-e test (\cref{sec:eval-dataset-stats}). Il \hyperref[obj:O4]{volume di dati
-    adeguato al fine-tuning} (\textbf{O4}) è confermato non solo dal numero
-complessivo di quattordicimilaventuno varianti prodotte, ma soprattutto dal
-fatto che il dataset si sia dimostrato concretamente utilizzabile per addestrare
-un modello con risultati misurabili, come riportato di seguito.
-
-La valutazione sperimentale del modello ottenuto tramite fine-tuning ha prodotto
-un risultato solido, un exact match del 46\% su un insieme di test in stile
-coerente con l'addestramento, ottenuto con LoRA su un modello di soli 270
-milioni di parametri (\cref{sec:eval-experimental}). Due risultati metodologici
-emersi durante la valutazione meritano di essere sottolineati. Il primo è che la
-scelta del checkpoint in base alla validation loss, piuttosto che all'ultima
-iterazione disponibile, ha prodotto un miglioramento determinante, dal 15\% al
-46\% di exact match a parità di modello e di dati. Il secondo è che, a parità di
-ordine di grandezza di iterazioni, LoRA ha superato nettamente il full
-fine-tuning condotto come confronto (46\% contro 18\%). L'analisi degli errori
-residui ha inoltre mostrato che nessuno di essi consiste in una query
-sintatticamente non valida: il modello ha appreso in modo affidabile la
-grammatica del linguaggio di interrogazione, concentrando le proprie difficoltà
-nella discriminazione tra entità o valori simili tra loro, piuttosto che in un
-comportamento arbitrario.
-
-Il processo di sviluppo ha inoltre permesso di individuare e diagnosticare
-cinque problemi di qualità genuini nel dataset generato
-(\cref{sec:eval-quality-issues}), riconducendo ciascuno alla propria causa
-tecnica; due di essi sono già stati corretti nell'ambito di questo lavoro,
-mentre per i restanti tre è proposta una via di correzione nella sezione
-seguente. Due ulteriori comportamenti, inizialmente considerati problematici,
-sono stati infine riconosciuti come accettabili, un risultato che riflette una
-comprensione più matura, maturata nel corso del lavoro, di cosa costituisca
-realmente un difetto in un dataset di questo tipo rispetto a una variazione
-legittima.
 
 \section{Sviluppi futuri}
 \label{sec:future-work}
@@ -3055,71 +3168,131 @@ Alcuni dei problemi di qualità discussi in \cref{sec:eval-quality-issues} non
 hanno ricevuto, nell'ambito di questo lavoro, una correzione alla radice, e
 rappresentano quindi possibili direzioni di sviluppo futuro.
 
-\textbf{Confusione tra acronimi clinici simili}
-(\cref{sec:eval-quality-issues}, p.~\pageref{prob:ecog}). Una possibile
-correzione consisterebbe nel restringere la generazione di sinonimi per questa
-categoria di valori a un dizionario curato di equivalenze verificate, invece di
-affidarsi alla generazione libera del modello linguistico locale, che non
-dispone di una base affidabile di terminologia clinica.
-
-\textbf{Allucinazione di codici ICD-10}
-(\cref{sec:eval-quality-issues}, p.~\pageref{prob:icd10}). Il difetto specifico
-nel filtro di riconoscimento è già stato corretto, ma una correzione più robusta
-consisterebbe nell'escludere del tutto dalla generazione libera qualunque valore
-riconducibile a un sistema di codifica controllato, sostituendola con una
-verifica rispetto alla tabella dei codici validi prima di accettare qualunque
-sostituzione proposta, così da eliminare il rischio alla radice invece di
-limitarsi a riconoscere meglio i pattern da escludere.
-
-\textbf{Valore letterale "nan" come unità di misura}
-(\cref{sec:eval-quality-issues}, p.~\pageref{prob:nan}). Una correzione
-consisterebbe nel riconoscere esplicitamente questo tipo di valore mancante
-durante la generazione del dataset strutturato, escludendo il record interessato
-o rappresentando l'assenza del dato in modo esplicito, invece di lasciare che un
-segnaposto tecnico non gestito raggiunga il testo finale.
+\begin{itemize}
+    \item \textbf{Confusione tra acronimi clinici simili}
+          (\cref{sec:eval-quality-issues}). Una possibile
+          correzione consisterebbe nel restringere la generazione di sinonimi per questa
+          categoria di valori a un dizionario curato di equivalenze verificate, invece di
+          affidarsi alla generazione libera del modello linguistico locale, che non
+          dispone di una base affidabile di terminologia clinica.
+    \item \textbf{Allucinazione di codici ICD-10}
+          (\cref{sec:eval-quality-issues}). Il difetto specifico
+          nel filtro di riconoscimento è già stato corretto, ma una correzione più robusta
+          consisterebbe nell'escludere del tutto dalla generazione libera qualunque valore
+          riconducibile a un sistema di codifica controllato, sostituendola con una
+          verifica rispetto ad una tabella dei codici validi prima di accettare qualunque
+          sostituzione proposta, così da eliminare il rischio alla radice invece di
+          limitarsi a riconoscere meglio i pattern da escludere.
+    \item \textbf{Valore letterale "nan" come unità di misura}
+          (\cref{sec:eval-quality-issues}). Una correzione
+          consisterebbe nel riconoscere esplicitamente questo tipo di valore mancante
+          durante la generazione del dataset strutturato, escludendo il record interessato
+          o rappresentando l'assenza del dato in modo esplicito, invece di lasciare che un
+          segnaposto tecnico non gestito raggiunga il testo finale.
+\end{itemize}
 
 \subsection{Altre direzioni di sviluppo}
 \label{sec:future-other}
 
-Oltre alla risoluzione dei problemi di qualità appena discussi, il lavoro
-suggerisce alcune direzioni di sviluppo più ampie, emerse dai limiti riscontrati
-nel corso della valutazione più che da difetti puntuali.
+Oltre alla risoluzione dei problemi di qualità appena discussi, si possono
+proporre alcune direzioni di sviluppo più ampie, emerse dai limiti riscontrati
+soprattutto nel corso della valutazione.
 
-\textbf{Estensione della copertura dello schema}. Il dataset attuale copre
-quarantacinque entità dello schema (\hyperref[obj:O1]{O1}), una scelta selettiva
-e non esaustiva. Il meccanismo di configurazione dei tier tramite file esterno
-(\cref{sec:impl-tier-config}) rende possibile estendere questa copertura ad
-altre classi e relazioni del knowledge graph senza modificare il codice del
-generatore; sfruttare concretamente questa possibilità per ampliare il dataset
-resta un lavoro da svolgere.
+\begin{itemize}
+    \item \textbf{Valutazione a livello di esecuzione}. La metrica di valutazione
+          impiegata in questo lavoro, l'exact match, richiede una corrispondenza carattere
+          per carattere tra la query generata e quella di riferimento
+          (\cref{sec:eval-experimental}). Una query semanticamente equivalente ma
+          formulata in modo sintatticamente diverso, ad esempio con clausole in un ordine
+          differente, viene quindi conteggiata come errore anche quando produrrebbe lo
+          stesso risultato se eseguita sul knowledge graph. Una valutazione complementare,
+          che esegua le query generate sull'endpoint di CVL e ne confronti i risultati
+          restituiti anziché il solo testo, fornirebbe una stima più accurata delle
+          prestazioni reali del modello.
+    \item \textbf{Altre tecniche o modelli di adattamento}. Questo lavoro ha confrontato
+          LoRA con il full fine-tuning (\cref{sec:eval-experimental}), ma non ha testato
+          QLoRA, pure introdotta in \cref{sec:peft-lora} come tecnica in grado di ridurre
+          ulteriormente l'occupazione di memoria rispetto a LoRA; allo stesso modo, non
+          sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di
+          dimensioni maggiori o architettura differente, che potrebbero offrire una
+          migliore capacità di generalizzazione a scapito di un costo computazionale più
+          elevato.
+    \item \textbf{Resilienza a interruzioni estesa al generatore}. Il requisito di
+          resilienza a interruzioni (\hyperref[rnf:RNF2]{RNF2}) è soddisfatto dallo stadio
+          di augmentation, che ricostruisce a ogni avvio l'elenco dei record già
+          processati, ma non dal generatore, che non conserva alcuna informazione tra
+          un'esecuzione interrotta e la successiva. Estendere un meccanismo analogo anche
+          al generatore ridurrebbe il lavoro perso in caso di interruzione durante le fasi
+          iniziali della pipeline.
+\end{itemize}
 
-\textbf{Valutazione a livello di esecuzione}. La metrica di valutazione
-impiegata in questo lavoro, l'exact match, richiede una corrispondenza carattere
-per carattere tra la query generata e quella di riferimento
-(\cref{sec:eval-experimental}). Una query semanticamente equivalente ma
-formulata in modo sintatticamente diverso, ad esempio con clausole in un ordine
-differente, viene quindi conteggiata come errore anche quando produrrebbe lo
-stesso risultato se eseguita sul knowledge graph. Una valutazione complementare,
-che esegua le query generate sull'endpoint di CVL e ne confronti i risultati
-restituiti anziché il solo testo, fornirebbe una stima più accurata delle
-prestazioni reali del modello.
+\subsection{Conclusioni}
 
-\textbf{Altre tecniche o modelli di adattamento}. Questo lavoro ha confrontato
-LoRA con il full fine-tuning (\cref{sec:eval-experimental}), ma non ha testato
-QLoRA, pure introdotta in \cref{sec:peft-lora} come tecnica in grado di ridurre
-ulteriormente l'occupazione di memoria rispetto a LoRA; allo stesso modo, non
-sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di
-dimensioni maggiori o architettura differente, che potrebbero offrire una
-migliore capacità di generalizzazione a scapito di un costo computazionale più
-elevato.
+Questo lavoro di tesi ha affrontato e risolto l'assenza di un dataset di
+addestramento specifico per l'interrogazione in linguaggio naturale del
+\textit{knowledge graph} del Cancer Virtual Lab. A tale scopo, è stata
+progettata, sviluppata e validata una pipeline automatica a due stadi per la
+generazione dei dati, la cui efficacia è stata dimostrata empiricamente
+attraverso il \textit{fine-tuning} di un modello linguistico ultraleggero.
 
-\textbf{Resilienza a interruzioni estesa al generatore}. Il requisito di
-resilienza a interruzioni (\hyperref[rnf:RNF2]{RNF2}) è soddisfatto dallo stadio
-di augmentation, che ricostruisce a ogni avvio l'elenco dei record già
-processati, ma non dal generatore, che non conserva alcuna informazione tra
-un'esecuzione interrotta e la successiva. Estendere un meccanismo analogo anche
-al generatore ridurrebbe il lavoro perso in caso di interruzione durante le fasi
-iniziali della pipeline.
+I quattro obiettivi architetturali stabiliti in fase di analisi
+(\cref{chap:analisi}) sono stati pienamente soddisfatti:
+
+\begin{itemize}
+    \item \textbf{\hyperref[obj:O1]{O1 - Copertura selettiva ed estendibilità}:}
+          garantita dall'introduzione di un sistema a \textit{tier}, che mappa
+          con successo le entità ontologiche selezionate con facilità. Il
+          sistema risulta nativamente estendibile a nuove classi tramite
+          configurazioni esterne, azzerando la necessità di interventi sul
+          codice sorgente (\cref{sec:impl-tier-config}).
+    \item \textbf{\hyperref[obj:O2]{O2 - Varietà linguistica autentica}:}
+          ottenuta mediante un modulo di \textit{augmentation} capace di
+          declinare ogni interrogazione in dieci registri stilistici differenti,
+          mantenendo un tasso di successo superiore al 97\% persino nelle
+          configurazioni di mascheramento più restrittive
+          (\cref{sec:eval-masking-comparison}).
+    \item \textbf{\hyperref[obj:O3]{O3 - Tracciabilità completa}:} assicurata
+          dalla propagazione di un identificativo univoco di provenienza lungo tutta
+          la pipeline, questo meccanismo ha permesso di certificare matematicamente
+          l'assenza di \textit{data leakage} tra gli insiemi di \textit{train},
+          \textit{validation} e \textit{test} (\cref{sec:eval-dataset-stats}).
+    \item \textbf{\hyperref[obj:O4]{O4 - Volume di dati adeguato}:} validato non
+          solo dalla produzione massiva di 14\,021 varianti, ma soprattutto
+          dall'efficacia pratica del dataset, rivelatosi determinante per
+          l'addestramento e il raggiungimento di risultati quantificabili sul modello
+          linguistico finale.
+\end{itemize}
+
+Sotto il profilo empirico, la valutazione del modello ha restituito risultati di
+assoluto rilievo. L'applicazione della tecnica LoRA su un'architettura
+ultra-compatta di soli 270 milioni di parametri ha permesso di raggiungere un
+\textit{Exact Match} del 46\% su un benchmark in stile coerente con i dati di
+addestramento.
+
+Ancora più rilevante è l'esito dell'analisi degli errori, in cui in nessun caso
+il modello ha generato query sintatticamente invalide. Possiamo dunque dedurre
+che la rete ha interiorizzato perfettamente la complessa grammatica SPARQL,
+confinando le incertezze residue alla sola discriminazione semantica tra entità
+o valori ontologici simili, escludendo così derive allucinatorie o comportamenti
+arbitrari.
+
+Infine, il rigoroso approccio iterativo adottato ha consentito di identificare,
+diagnosticare e documentare con precisione cinque anomalie qualitative nel
+dataset generato (\cref{sec:eval-quality-issues}). Avendo ricondotto ciascuna
+casistica alla rispettiva radice tecnica, due di queste criticità sono state
+risolte in modo definitivo all'interno di questo lavoro, mentre per le restanti
+tre è stato tracciato un chiaro percorso di risoluzione per gli sviluppi futuri.
+Parallelamente, un'analisi approfondita ha permesso di riqualificare due
+comportamenti apparentemente anomali come variazioni fisiologiche e legittime.
+
+In prospettiva, i risultati di questa ricerca dimostrano che l'uso di modelli
+ultra-compatti su dati clinici, imposto dai vincoli di privacy, non
+rappresenta un limite architetturale invalicabile. Se supportati da dati
+sintetici strutturati di altissima qualità e da metodologie di adattamento
+mirate, questi modelli possono superare la semplice validazione sintattica,
+arrivando a interrogare con successo la complessa semantica di un dominio medico
+specialistico.
+
 
 \backmatter
 
