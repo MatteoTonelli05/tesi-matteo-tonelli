@@ -46,8 +46,7 @@ su knowledge graph clinico-oncologico}
 \begin{abstract}
     Il lavoro proposto si colloca nel progetto Cancer Virtual Lab (CVL), il
     quale raccoglie i dati clinici oncologici dell'IRCCS IRST "Dino Amadori" in
-    un Knowledge Graph interrogabile tramite SPARQL\footnote{W3C SPARQL 1.1
-        Query Language Recommendation:
+    un Knowledge Graph interrogabile tramite SPARQL\footnote{
         \url{[https://www.w3.org/TR/sparql11-query/](https://www.w3.org/TR/sparql11-query/)}}.
     La natura formale di SPARQL rappresenta però una barriera per il personale
     sanitario e un'interfaccia in linguaggio naturale (Text-to-SPARQL)
@@ -86,57 +85,7 @@ su knowledge graph clinico-oncologico}
 \mainmatter
 
 \chapter{Introduzione}
-\label{chap:introduction}
-
-Il Cancer Virtual Lab (CVL) è una piattaforma che raccoglie i dati clinici
-oncologici dell'IRST "Dino Amadori" in un knowledge graph interrogabile tramite
-SPARQL, il linguaggio di interrogazione standard per i dati strutturati secondo
-il modello RDF (\cref{chap:background}). SPARQL è un linguaggio formale, e la
-sua sintassi richiede una competenza tecnica che il personale clinico e i
-ricercatori del dominio oncologico non possiedono tipicamente, creando una
-barriera tra la ricchezza dei dati disponibili e la possibilità concreta di
-interrogarli senza il supporto di uno specialista informatico. Un'interfaccia in
-linguaggio naturale capace di tradurre una domanda posta in italiano o in
-inglese nella query SPARQL corrispondente ridurrebbe questa barriera, ma
-richiede un modello linguistico specificamente addestrato a questo compito: un
-modello generico, per quanto capace su compiti generali, non conosce la
-struttura specifica dell'ontologia di CVL, i nomi delle sue classi e proprietà,
-né le convenzioni con cui le query sono tipicamente costruite in questo
-contesto.
-
-Addestrare un simile modello richiede a sua volta un dataset di addestramento
-composto da coppie di domande in linguaggio naturale e query SPARQL
-corrispondenti, specifiche per l'ontologia di CVL. Un dataset di questo tipo non
-esiste in partenza, e costruirlo manualmente, coppia per coppia, non è una
-strada praticabile alla scala necessaria per un addestramento efficace. Questo
-lavoro affronta questo problema progettando e implementando una pipeline
-automatica in grado di generare un simile dataset, e ne verifica l'efficacia
-addestrando concretamente un modello linguistico sui dati prodotti.
-
-La pipeline sviluppata si articola in due stadi. Il primo genera in modo
-strutturato coppie di prompt e query SPARQL valide, esplorando sistematicamente
-lo schema del knowledge graph e campionando combinazioni di vincoli
-sintatticamente corrette. Il secondo arricchisce ciascuna coppia con più
-formulazioni linguistiche alternative della stessa domanda, aumentando la
-varietà stilistica del dataset senza alterarne la correttezza semantica. Il
-modello linguistico risultante dal fine-tuning su questo dataset è stato infine
-valutato sperimentalmente, confrontando diverse configurazioni di addestramento
-e analizzando la natura degli errori residui.
-
-\section*{Struttura della tesi}
-
-Il \cref{chap:background} introduce il contesto tecnico necessario a seguire il
-resto del lavoro: la piattaforma CVL, i concetti di knowledge graph, RDF e
-SPARQL, i lavori correlati sulla generazione di dataset text-to-SPARQL, e le
-tecniche di fine-tuning di modelli linguistici impiegate più avanti. Il
-\cref{chap:analisi} definisce gli obiettivi, i vincoli e i requisiti del
-sistema. Il \cref{chap:progettazione} descrive le decisioni progettuali alla
-base sia del generatore sia dello stadio di augmentation. Il
-\cref{chap:implementation} ne documenta l'implementazione concreta. Il
-\cref{chap:evaluation} riporta i risultati sperimentali, sia sul dataset
-prodotto sia sul modello linguistico addestrato a partire da esso. Il
-\cref{chap:conclusion} chiude il lavoro con una sintesi dei risultati ottenuti e
-le direzioni di sviluppo future.
+\label{chap:introduzione}
 
 \chapter{Background}
 \label{chap:background}
@@ -501,7 +450,7 @@ formulazioni linguistiche artificiali e ripetitive, incapaci di coprire la
 varietà lessicale e la complessità relazionale tipica del linguaggio umano
 specialistico-oncologico.
 
-\subsection{Sintesi Guidata da Regole e Grammatiche Formali (MK-SQuIT)}
+\subsection{Sintesi Guidata da Regole e Grammatiche Formali }
 Per superare la rigidità dei template tradizionali, successivi lavori hanno
 esplorato tecniche di sintesi automatizzata basate sulla generazione orientata
 alla grammatica, come ad esempio la metodologia MK-SQuIT \cite{mksquit}. Questo
