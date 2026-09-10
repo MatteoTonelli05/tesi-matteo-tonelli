@@ -3199,31 +3199,35 @@ proporre alcune direzioni di sviluppo più ampie, emerse dai limiti riscontrati
 soprattutto nel corso della valutazione.
 
 \begin{itemize}
-    \item \textbf{Valutazione a livello di esecuzione}. La metrica di valutazione
-          impiegata in questo lavoro, l'exact match, richiede una corrispondenza carattere
-          per carattere tra la query generata e quella di riferimento
-          (\cref{sec:eval-experimental}). Una query semanticamente equivalente ma
-          formulata in modo sintatticamente diverso, ad esempio con clausole in un ordine
-          differente, viene quindi conteggiata come errore anche quando produrrebbe lo
-          stesso risultato se eseguita sul knowledge graph. Una valutazione complementare,
-          che esegua le query generate sull'endpoint di CVL e ne confronti i risultati
-          restituiti anziché il solo testo, fornirebbe una stima più accurata delle
-          prestazioni reali del modello.
-    \item \textbf{Altre tecniche o modelli di adattamento}. Questo lavoro ha confrontato
-          LoRA con il full fine-tuning (\cref{sec:eval-experimental}), ma non ha testato
-          QLoRA, pure introdotta in \cref{sec:peft-lora} come tecnica in grado di ridurre
-          ulteriormente l'occupazione di memoria rispetto a LoRA; allo stesso modo, non
-          sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di
-          dimensioni maggiori o architettura differente, che potrebbero offrire una
-          migliore capacità di generalizzazione a scapito di un costo computazionale più
-          elevato.
-    \item \textbf{Resilienza a interruzioni estesa al generatore}. Il requisito di
-          resilienza a interruzioni (\hyperref[rnf:RNF2]{RNF2}) è soddisfatto dallo stadio
-          di augmentation, che ricostruisce a ogni avvio l'elenco dei record già
-          processati, ma non dal generatore, che non conserva alcuna informazione tra
-          un'esecuzione interrotta e la successiva. Estendere un meccanismo analogo anche
-          al generatore ridurrebbe il lavoro perso in caso di interruzione durante le fasi
-          iniziali della pipeline.
+    \item \textbf{Valutazione a livello di esecuzione}. La metrica di
+          valutazione impiegata in questo lavoro, l'exact match, richiede una
+          corrispondenza carattere per carattere tra la query generata e quella
+          di riferimento. Una query semanticamente equivalente ma formulata in
+          modo sintatticamente diverso, ad esempio con clausole in un ordine
+          differente, viene quindi conteggiata come errore anche quando
+          produrrebbe lo stesso risultato se eseguita sul knowledge graph. Una
+          valutazione complementare, che esegua le query generate sull'endpoint
+          di CVL e ne confronti i risultati restituiti anziché il solo testo,
+          fornirebbe una stima più accurata delle prestazioni reali del modello.
+    \item \textbf{Altre tecniche o modelli di adattamento}. Questo lavoro ha
+          confrontato LoRA con il full fine-tuning, ma non ha testato QLoRA,
+          nonostante fosse introdotta in \cref{sec:peft-lora} come tecnica in
+          grado di ridurre ulteriormente l'occupazione di memoria rispetto a
+          LoRA; allo stesso modo, non sono stati testati modelli di base diversi
+          da \texttt{Gemma3:270M}, di dimensioni maggiori o architettura
+          differente, che potrebbero offrire una migliore capacità di
+          generalizzazione a scapito di un costo computazionale più elevato.
+    \item \textbf{Estenzione alla lingua
+              italiana.} L'attuale pipeline produce varianti conversazionali
+          esclusivamente in lingua inglese, in allineamento con la nomenclatura
+          dell'ontologia di base. Uno sviluppo futuro di grande impatto applicativo
+          consisterebbe nell'estendere il modulo di \textit{augmentation} per generare
+          e validare registri stilistici direttamente in italiano. La creazione di un
+          corpus di addestramento localizzato abiliterebbe il \textit{fine-tuning} di
+          modelli capaci di tradurre interrogazioni mediche formulate nativamente in
+          italiano in query SPARQL, abbattendo le barriere linguistiche per gli utenti
+          finali e facilitando l'adozione del sistema da parte del personale clinico
+          nel contesto nazionale.
 \end{itemize}
 
 \subsection{Conclusioni}
