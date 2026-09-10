@@ -46,12 +46,14 @@ su knowledge graph clinico-oncologico}
 \begin{abstract}
     Il lavoro proposto si colloca nel progetto Cancer Virtual Lab (CVL), il
     quale raccoglie i dati clinici oncologici dell'IRCCS IRST "Dino Amadori" in
-    un Knowledge Graph interrogabile tramite SPARQL. La natura formale di SPARQL
-    rappresenta però una barriera per il personale sanitario e un'interfaccia in
-    linguaggio naturale (Text-to-SPARQL) permetterebbe di abbattere tale
-    barriera, ma richiederebbe un modello linguistico addestrato sull'ontologia
-    specifica di CVL, per la quale non esistono dataset di addestramento
-    pubblici.
+    un Knowledge Graph interrogabile tramite SPARQL\footnote{W3C SPARQL 1.1
+        Query Language Recommendation:
+        \url{[https://www.w3.org/TR/sparql11-query/](https://www.w3.org/TR/sparql11-query/)}}.
+    La natura formale di SPARQL rappresenta però una barriera per il personale
+    sanitario e un'interfaccia in linguaggio naturale (Text-to-SPARQL)
+    permetterebbe di abbattere tale barriera, ma richiederebbe un modello
+    linguistico addestrato sull'ontologia specifica di CVL, per la quale non
+    esistono dataset di addestramento pubblici.
 
     Questo lavoro progetta e implementa una pipeline automatizzata a due stadi
     per la generazione di un dataset Text-to-SPARQL sintetico, garantendo
@@ -66,7 +68,7 @@ su knowledge graph clinico-oncologico}
     La pipeline ha prodotto in fase di testing un dataset di 14.021 esempi,
     strutturato con una rigorosa separazione per record sorgente tra gli insiemi
     di addestramento, validazione e test per evitare data leakage. Un modello
-    Gemma 3 270M, sottoposto a fine-tuning mediante LoRA su questo dataset, ha
+    \texttt{Gemma3:270M}, sottoposto a fine-tuning mediante LoRA su questo dataset, ha
     raggiunto un exact match del 46\% sull'insieme di test in-distribution,
     individuando il checkpoint ottimale tramite validation loss e superando
     nettamente il full fine-tuning (18\%). L'analisi degli errori residui ha
@@ -165,15 +167,17 @@ sezioni interconnesse:
           (\textit{Resource Description Framework}). Viene inoltre
           approfondito il linguaggio di interrogazione SPARQL, insieme al
           ruolo degli strumenti software locali (in particolare la libreria
-          Python \texttt{rdflib}) utilizzati per la validazione sintattica
-          deterministica delle query.
+          Python
+          \texttt{rdflib})\footnote{\url{[https://rdflib.readthedocs.io/en/stable/](https://rdflib.readthedocs.io/en/stable/)}}
+          utilizzati per la validazione sintattica deterministica delle
+          query.
 
     \item \textbf{Architettura Software e Pattern
               (\cref{sec:bg-software-tools}):} analizza le scelte tecnologiche e
           i pattern di progettazione software adottati nell'ingegneria del
           sistema, tra cui l'architettura a \textit{Mixin} per la
           composizione modulare delle responsabilità e il framework
-          \texttt{Streamlit} per la prototipazione di interfacce interattive
+          \texttt{Streamlit}\footnote{\url{[https://streamlit.io/](https://streamlit.io/)}} per la prototipazione di interfacce interattive
           di monitoraggio e controllo.
 
     \item \textbf{Lavori Correlati e Benchmark di Text-to-SPARQL
@@ -1385,45 +1389,47 @@ rispondono a tre precise esigenze implementative:
 
 \begin{itemize}
     \item \textbf{Accesso in tempo costante $\mathcal{O}(1)$ durante la DFS:}
-          Durante la ricerca in profondità dei percorsi (\cref{sec:impl-routes}),
-          l'indicizzazione per chiave di entità consente l'estrazione immediata di
-          proprietà e relazioni, evitando la scansione sequenziale di una lista
-          globale ($\mathcal{O}(N)$).
+          Durante la ricerca in profondità dei percorsi
+          (\cref{sec:impl-routes}), l'indicizzazione per chiave di entità
+          consente l'estrazione immediata di proprietà e relazioni, evitando la
+          scansione sequenziale di una lista globale ($\mathcal{O}(N)$).
 
     \item \textbf{Gestione della memoria (\texttt{MAX\_STORED\_VALUES}):} Per i
           campi ad alta cardinalità (es. misurazioni continue), il
-          \texttt{DiscoveryMixin} applica un limite rigido alla lista \texttt{values},
-          memorizzando unicamente un campionario rappresentativo per la successiva
-          fase di iniezione.
+          \texttt{DiscoveryMixin} applica un limite rigido alla lista
+          \texttt{values}, memorizzando unicamente un campionario
+          rappresentativo per la successiva fase di iniezione.
+
 
     \item \textbf{Parallelizzazione dell'I/O
               (\texttt{MAX\_DISCOVERY\_WORKERS}):} Poiché le chiamate REST per la scoperta
-          delle singole entità sono operazioni indipendenti, il recupero iniziale
-          viene velocizzato sfruttando un pool di thread tramite
-          \texttt{concurrent.futures.ThreadPoolExecutor}.
+          delle singole entità sono operazioni indipendenti, il recupero iniziale può
+          essere velocizzato sfruttando un pool di thread tramite
+          \texttt{concurrent.futures.ThreadPoolExecutor}\footnote{\url{https://docs.python.org/3/library/concurrent.futures.html\#threadpoolexecutor}}.
 \end{itemize}
 
-L'uso di una mappa statica introduce un'approssimazione di dominio: il sistema
-assume che le proprietà di una classe dipendano unicamente dal suo tipo e non
-dalla sequenza di salti relazionali con cui viene raggiunta. L'API di CVL, al
-contrario, adotta un comportamento dinamico che mostra o nasconde determinati
-vincoli in base allo storico della selezione.
+L'uso di una mappa statica, però, introduce un'approssimazione di dominio: Il
+sistema infatti assume che le proprietà di una classe dipendano unicamente dal
+suo tipo e non dalla sequenza di salti relazionali con cui viene raggiunta, al
+contrario rispetto l'API di CVL, la quale adotta un comportamento dinamico che
+mostra o nasconde determinati vincoli in base allo storico della selezione.
 
 Questa scelta progettuale è stata deliberatamente accettata a seguito di
 un'analisi di fattibilità:
 
 \begin{itemize}
     \item \textbf{Abbattimento della latenza di rete:} Senza la mappa in
-          memoria, ogni nodo della DFS richiederebbe un'interrogazione HTTP sincrona.
-          Nelle strutture ad alta complessità combinatoria, il volume di chiamate
-          aumenterebbe in modo moltiplicativo, portando i tempi di generazione da
-          pochi minuti a diverse ore con un alto rischio di timeout.
+          memoria, ogni nodo della DFS richiederebbe un'interrogazione HTTP
+          sincrona. Nelle strutture ad alta complessità combinatoria, il volume
+          di chiamate aumenterebbe in modo moltiplicativo, portando i tempi di
+          generazione da pochi minuti a diverse ore con un alto rischio di
+          timeout.
 
     \item \textbf{Impatto marginale sulla copertura (\hyperref[obj:O1]{O1}):} La
           mancata tracciabilità del contesto dinamico priva il sistema solo di
-          predicati altamente specialistici legati a combinazioni rare, preservando
-          appieno la rappresentazione delle query più frequenti e rilevanti per il
-          dominio clinico.
+          predicati altamente specialistici legati a combinazioni rare,
+          preservando appieno la rappresentazione delle query più frequenti e
+          rilevanti per il dominio clinico.
 \end{itemize}
 \subsection{Costruzione delle route}
 \label{sec:impl-routes}
@@ -1479,10 +1485,7 @@ Prima di generare i record, il sistema calcola quante coppie prompt-query
 distinte siano effettivamente raggiungibili con le route disponibili e i vincoli
 configurati, in modo da non richiedere più record di quanti lo spazio
 combinatorio possa realmente offrire; solo dopo, campiona a caso tra le
-combinazioni così stimate per costruire ogni singolo record. I due passi sono di
-natura diversa: la stima è un conteggio puramente matematico, espresso di
-seguito con delle formule; il campionamento è invece un algoritmo vero e
-proprio, mostrato più avanti in codice.
+combinazioni così stimate per costruire ogni singolo record.
 
 \subsubsection{Stima combinatoria}
 
@@ -1611,10 +1614,14 @@ operazioni si presta meglio all'esecuzione concorrente.
 Proprio perché il parallelismo può comunque essere attivato lo stato condiviso
 tra i thread non è protetto da un unico lock globale ma da quattro lock
 distinti, ciascuno a guardia di una porzione di stato diversa e indipendente
-dalle altre: un lock protegge gli insiemi usati per riconoscere i duplicati
-(\cref{sec:impl-output}), un altro la cache dello scheletro
-(\cref{sec:impl-skeleton}), un altro ancora le statistiche interne sulle
-chiamate effettuate, e l'ultimo il registro dei job attualmente in esecuzione.
+dalle altre:
+\begin{itemize}
+    \item un lock protegge gli insiemi usati per riconoscere i duplicati
+    \item un altro la cache dello scheletro (\cref{sec:impl-skeleton})
+    \item un altro ancora le statistiche interne sulle chiamate effettuate
+    \item l'ultimo il registro dei job attualmente in esecuzione
+          (\cref{sec:impl-output})
+\end{itemize}
 Tenerli separati, invece di usarne uno solo per tutto, evita che un thread resti
 bloccato in attesa di una struttura dati che non gli serve, solo perché un altro
 thread ne sta aggiornando una diversa nello stesso istante.
@@ -1673,12 +1680,12 @@ successivo, accumulando progressivamente lo stato della query in costruzione
 finché non raggiunge il nodo del terminal stesso. Questa procedura ripercorre
 esattamente il percorso che la fase di scoperta della mappa aveva già seguito
 per costruire la mappa iniziale (\cref{sec:impl-discovery}); la differenza è che
-lì veniva fatto una volta per ogni proprietà isolata, per costruire la mappa,
-mentre qui viene ripetuto per intero a ogni singolo record. Durante questa fase
-di costruzione online sono inoltre presenti alcuni meccanismi di resilienza,
-introdotti per gestire le condizioni anomale e gli eventuali problemi che
-possono verificarsi durante le chiamate all'API. Tali meccanismi si sono
-rivelati necessari nel corso dello sviluppo e vengono descritti di seguito.
+lì veniva fatto una volta per ogni proprietà isolata, mentre qui viene ripetuto
+per intero a ogni singolo record. Durante questa fase di costruzione online sono
+inoltre presenti alcuni meccanismi di resilienza, introdotti per gestire le
+condizioni anomale e gli eventuali problemi che possono verificarsi durante le
+chiamate all'API. Tali meccanismi si sono rivelati necessari nel corso dello
+sviluppo e vengono descritti di seguito.
 
 \begin{itemize}
     \item se l'API impiega troppo a rispondere, il fallimento è considerato
@@ -1766,13 +1773,13 @@ history = [ { "query_nodes": [ {"predicate": {"label": "gender"}, "values":
 \subsection{Generazione del prompt e tracciamento degli span}
 \label{sec:impl-phrasing}
 
-Definiamo un segmento come un pezzo di testo accompagnato da un booleano che
-indica se il testo contenga un valore letterale, come una data o un codice,
-oppure solo una parola di struttura della frase come \emph{with} o \emph{and}.
-Con lo scheletro completo di valori, il prompt viene costruito riassemblando i
-suoi nodi in una lista di segmenti, concatenati uno via l'altro formando il
-prompt finale. La formulazione di ciascun segmento dipende da cosa contiene il
-nodo di origine:
+Definiamo un \textit{segmento} come un pezzo di testo accompagnato da un
+booleano che indica se il testo contenga un valore letterale, come una data o un
+codice, oppure solo una parola di struttura della frase come \emph{with} o
+\emph{and}. Con lo scheletro completo di valori, il prompt viene costruito
+riassemblando i suoi nodi in una lista di segmenti, concatenati uno via l'altro
+formando il prompt finale. La formulazione di ciascun segmento dipende da cosa
+contiene il nodo di origine:
 
 \begin{itemize}
     \item se il nodo ha valori scelti (\cref{sec:impl-values}), il segmento
@@ -1806,11 +1813,10 @@ partire dal prompt finale sarebbe infatti ambiguo nel caso in cui lo stesso
 valore comparisse, per coincidenza, anche in un'altra posizione della frase.
 Registrare le coordinate durante la costruzione del testo elimina quindi questa
 ambiguità senza richiedere controlli aggiuntivi. La funzione restituisce sempre
-la coppia \texttt{(prompt, value\_spans)} coerente tra loro, qualunque sia il
-testo prodotto; solo più avanti, al momento di salvare il record completo, il
-flag \texttt{include\_value\_spans} (\cref{sec:impl-config}) decide se il campo
-\texttt{value\_spans} venga scritto nell'output finale o scartato, sempre attivo
-nei run di produzione.
+la coppia \texttt{(prompt, value\_spans)}, ma solo più avanti, al momento di
+salvare il record completo, il flag \texttt{include\_value\_spans}
+(\cref{sec:impl-config}) decide se il campo \texttt{value\_spans} venga scritto
+nell'output finale o scartato (sempre attivo nei run di produzione).
 
 Applicata allo scheletro pieno di \cref{lst:filled-nodes}, la procedura produce
 il prompt \emph{"Find all patient with gender Female and birth date between
@@ -1821,67 +1827,84 @@ il prompt \emph{"Find all patient with gender Female and birth date between
 \subsection{Controlli di qualità e deduplicazione}
 \label{sec:impl-output}
 
-Prima di essere salvata, ogni coppia prompt-query attraversa tre controlli in
-sequenza.
+Prima della persistenza su disco, ogni coppia prompt-query generata viene
+sottoposta a una sequenza di tre controlli di qualità indipendenti:
 
 \begin{enumerate}
-    \item Il primo verifica che la query restituita dall'API contenga davvero
-          una clausola \texttt{FILTER} o \texttt{VALUES}, oppure almeno uno dei
-          valori letterali scelti. Questo controllo esiste perché l'API
-          potrebbe, in linea di principio, restituire una query sintatticamente
-          valida ma priva di ogni vincolo reale, per esempio se un valore non
-          venisse tradotto correttamente in un filtro effettivo: una query del
-          genere risulterebbe innocua da eseguire, ma completamente slegata dal
-          prompt che dovrebbe rappresentare, e finirebbe nel dataset come
-          esempio scorretto senza che nulla lo segnali. Se nessuna delle due
-          condizioni è soddisfatta, il record viene scartato con il motivo
-          esplicito \emph{"the backend ignored our filters"}.
+    \item \textbf{Verifica dell'effettiva applicazione dei filtri:} Il primo
+          controllo accerta che la query SPARQL generata dall'API contenga le
+          clausole \texttt{FILTER} o \texttt{VALUES}, oppure almeno uno dei
+          valori letterali campionati. Questo passaggio intercetta le risposte
+          anomale del backend che, pur restituendo una sintassi valida, ignorano
+          i vincoli richiesti. Una query priva di filtri risulterebbe
+          semanticamente decontestualizzata rispetto al prompt associato,
+          introducendo un esempio errato nel dataset. Qualora nessuna condizione
+          sia soddisfatta, il record viene scartato con la motivazione esplicita
+          \emph{"the backend ignored our filters"}.
 
-          \begin{lstlisting}[language=Python, caption={Il primo controllo: verifica che i vincoli scelti siano effettivamente presenti nella query SPARQL restituita.}, label={lst:filters-landed}]
-def _filters_landed(sparql, chosen_values): if "FILTER" in sparql or "VALUES" in
-    sparql: return True return any(v in sparql for v in chosen_values)
-          \end{lstlisting}
+          \begin{lstlisting}[
+        language=Python,
+        caption={Verifica della presenza dei vincoli nella query SPARQL.},
+        label={lst:filters-landed}
+    ]
+def _filters_landed(sparql, chosen_values):
+    if "FILTER" in sparql or "VALUES" in sparql:
+        return True
+    return any(v in sparql for v in chosen_values)
+    \end{lstlisting}
 
-    \item Il secondo verifica la validità sintattica della query tramite un vero
-          parser SPARQL, la libreria
-          \texttt{rdflib}\footnote{\url{https://rdflib.readthedocs.io/}}. Serve
-          a intercettare query malformate prima che finiscano nel dataset: un
-          esempio di addestramento con una query che non si può nemmeno
-          interpretare sarebbe peggio che inutile, perché insegnerebbe al
-          modello una sintassi scorretta. Il controllo è condizionato dal
-          parametro \texttt{validate\_sparql} (\cref{lst:common-config}),
-          impostato a vero nei run di produzione; ogni query che non superava il
-          parsing veniva quindi scartata per davvero, con il motivo esplicito
-          \emph{"the SPARQL does not parse (rdflib)"}.
+    \item \textbf{Parsing sintattico deterministico:} Il secondo controllo
+          valida la correttezza formale della query tramite il parser della
+          libreria \texttt{rdflib}. L'obiettivo è prevenire l'inclusione di
+          query malformate che insegnerebbero al modello linguistico una
+          grammatica errata. Il controllo è subordinato al parametro di
+          configurazione \texttt{validate\_sparql} (\cref{lst:common-config}),
+          abilitato nei run di produzione. Gli esempi che falliscono l'analisi
+          sintattica vengono scartati con il motivo \emph{"the SPARQL does not
+              parse (rdflib)"}.
 
-          \begin{lstlisting}[language=Python, caption={Il secondo controllo: il parsing sintattico tramite \texttt{rdflib} è condizionato dal parametro di configurazione.}, label={lst:validate-sparql}]
-syntax_error = ( validate.sparql_error(sparql) if
-    self.config.get("validate_sparql", True) else None )
-          \end{lstlisting}
+          \begin{lstlisting}[
+        language=Python,
+        caption={Validazione sintattica condizionata della query SPARQL.},
+        label={lst:validate-sparql}
+    ]
+syntax_error = (
+    validate.sparql_error(sparql)
+    if self.config.get("validate_sparql", True)
+    else None
+)
+    \end{lstlisting}
 
-    \item Il terzo verifica che la coppia non sia un duplicato, tenendo in
-          memoria l'insieme dei prompt già visti e l'insieme degli hash
-          calcolati su ogni coppia prompt-query già accettata: un nuovo prompt
-          viene scartato se è già in quell'insieme, una nuova coppia se il suo
-          hash coincide con uno già registrato. Senza questo controllo, il
-          campionamento potrebbe scegliere per caso, in record diversi, la
-          stessa combinazione di route e valori, riducendo la varietà effettiva
-          senza che il conteggio totale dei record se ne accorga. In caso di
-          prompt duplicato, il sistema ritenta con nuovi valori scelti a caso
-          fino a 4 volte (\texttt{VALUE\_REROLLS}) prima di arrendersi.
+    \item \textbf{Deduplicazione e rigenerazione dei valori:} L'ultimo controllo
+          garantisce l'unicità dei dati mantenendo due tabelle hash in memoria:
+          una contenente i prompt già accettati e una per gli digest calcolati
+          sulle coppie prompt-query. In questo modo si evita che l'estrazione
+          casuale generi combinazioni identiche di route e valori, le quali
+          ridurrebbero la varietà reale del corpus. Qualora venga rilevato un
+          prompt duplicato, il sistema esegue fino a 4 tentativi di
+          rigenerazione dei valori (\texttt{VALUE\_REROLLS}) prima di scartare
+          definitivamente il record.
 \end{enumerate}
 
-Solo le coppie che superano tutti e tre i controlli vengono accumulate in un
-buffer e scritte su disco a gruppi di 50 (\texttt{BUFFER\_SIZE}).
+Le coppie che superano l'intero processo di validazione vengono accumulate in un
+buffer di memoria e scritte su disco a blocchi di 50 elementi
+(\texttt{BUFFER\_SIZE}).
 
 \subsection{Generazione manuale a entità singola}
 \label{sec:impl-manual}
 
-Tutto quanto descritto finora in questo capitolo, dalla scoperta della mappa
-fino ai controlli di qualità, produce record per \emph{una} entità alla volta,
-data una combinazione specifica di route e proprietà. Il modo più diretto per
-eseguire questo motore è farlo a mano, entità per entità, tramite un pannello
-dell'interfaccia Streamlit, organizzato in cinque sezioni.
+L'architettura del sistema disaccoppia nettamente la logica del motore di
+generazione finora descritto dalla sua modalità di invocazione. La classe
+\texttt{BulkDatasetGenerator} è progettata per essere del tutto "inconsapevole"
+del contesto di esecuzione, essa riceve infatti una semplice configurazione ed
+esegue il flusso di generazione indipendentemente dall'interfaccia che la
+richiama.
+
+Per consentire l'interazione diretta con questo motore, nell'ambito di questo
+lavoro di tesi è stato realizzato un pannello di controllo interattivo integrato
+nella piattaforma CVL tramite il framework Streamlit. Tale modulo fornisce
+un'interfaccia grafica per istanziare ed eseguire il generatore su una singola
+entità radice, mettendo a disposizione 5 sezioni principali:
 
 \begin{itemize}
     \item \textbf{Graph Map}: precondizione per tutto il resto, ha un pulsante
@@ -1891,7 +1914,7 @@ dell'interfaccia Streamlit, organizzato in cinque sezioni.
     \item \textbf{Mode}: sceglie tra questa modalità a entità singola e la
           generazione automatica da file di tier (\cref{sec:impl-tier-config}).
     \item \textbf{Starting Entity}: un menu a tendina per scegliere l'unica
-          entità radice da generare.
+          entità radice da cui far partire la generazione.
     \item \textbf{Configuration}: quattro slider, uno per relazioni da
           attraversare, proprietà per percorso, percorsi simultanei e valori per
           proprietà.
@@ -1905,66 +1928,79 @@ dell'interfaccia Streamlit, organizzato in cinque sezioni.
 \end{itemize}
 
 Gli estremi dei quattro slider di configurazione non sono fissi, ma vengono
-calcolati al volo scoprendo, tramite \texttt{discover\_routes\_from\_map}
+calcolati a runtime scoprendo, tramite \texttt{discover\_routes\_from\_map}
 (\cref{sec:impl-routes}), quante route siano effettivamente raggiungibili da
 quell'entità con i limiti scelti.
 
 %\begin{figure}[H] \centering
-%\includegraphics[width=.75\linewidth]{figures/manual-generation-mockup.pdf}
-%\caption{Mockup semplificato del pannello di generazione manuale: selezione
-%dell'entità, i quattro slider di configurazione, e il riscontro immediato sulle
-%route effettivamente scoperte. Non sono raffigurate le sezioni \emph{Generation
-%Mode} e \emph{History building}, i cui parametri sono già discussi altrove in
-%questo capitolo.} \label{fig:manual-mockup} \end{figure}
+%    \includegraphics[width=1\linewidth]{figures/manual-generation-mockup.pdf}
+%    \caption{Panoramica dell'interfaccia di controllo e calibrazione sviluppata
+%    in Streamlit per la generazione interattiva su singola entità. La figura
+%    illustra la sezione di selezione dell'entità radice e i quattro controlli
+%    parametrici adibiti alla modulazione della complessità, evidenziando il
+%    riscontro visivo dinamico sulle route effettivamente scoperte nel grafo.
+%    Per brevità di rappresentazione, le sezioni relative alle modalità di
+%    esecuzione e di gestione dello storico sono omesse, trovando già
+%    dettagliata trattazione nel testo.} \label{fig:manual-mockup} \end{figure}
 
 Questa modalità non è pensata per costruire un dataset completo, ma per
 esplorare e calibrare. Al termine della generazione, infatti, il pannello non si
-limita a riportare un conteggio finale, ma mostra due schede separate: una con i
-record effettivamente creati, in un'anteprima tabellare di prompt e query, e una
-con quelli scartati, raggruppati per motivo di scarto esatto, tra cui i tre già
-discussi in \cref{sec:impl-output} (filtri non atterrati nella query, query
-sintatticamente non valida, duplicato), con la possibilità di filtrare e
-ispezionare i singoli tentativi falliti per una singola categoria. È proprio
-questo riscontro dettagliato a rendere la modalità manuale utile a decidere
-quali parametri applicare a un tier con decine di entità e tempi di generazione
-elevati, dove un errore nei parametri rischierebbe di sprecare risorse di
-calcolo e prolungare inutilmente i tempi di attesa.
+limita a riportare un conteggio finale, ma mostra due schede separate:
+\begin{itemize}
+    \item una con i record effettivamente creati, in un'anteprima tabellare di
+          prompt e query
+    \item una con quelli scartati, raggruppati per motivo di scarto esatto (tra
+          cui i tre già discussi in \cref{sec:impl-output}) con la possibilità
+          di filtrare e ispezionare i singoli tentativi falliti per una singola
+          categoria
+\end{itemize}
+
+È proprio questo riscontro dettagliato a rendere la modalità manuale utile a
+decidere quali parametri applicare a un tier con decine di entità e tempi di
+generazione elevati, dove un errore nei parametri rischierebbe di sprecare
+risorse di calcolo e prolungare inutilmente i tempi di attesa.
 
 \subsection{Configurazione dei tier da file esterno}
 \label{sec:impl-tier-config}
 
-La procedura manuale appena descritta agisce su una sola entità alla volta, ma
-entità diverse dello schema possono richiedere impostazioni diverse tra loro a
-seconda di quanto siano rilevanti per il compito, di quanto siano profondamente
-connesse al resto del grafo, o di quante variazioni valga la pena
-rappresentarne.
+La modalità interattiva descritta nella sezione precedente consente
+l'esplorazione di una singola entità alla volta; tuttavia, le diverse classi
+dello schema richiedono parametri di generazione differenziati in base alla loro
+rilevanza clinica, alla densità delle loro connessioni nel grafo e al volume di
+varianti da rappresentare.
 
-Il generatore permette di raggruppare più entità sotto uno stesso insieme di
-parametri condivisi, un \emph{tier}, così da poter personalizzare queste
-impostazioni gruppo per gruppo invece di doverle applicare in modo uniforme a
-tutto lo schema, e di poter riutilizzare la stessa configurazione, o adattarla
-facilmente, in generazioni future. Per ciascun tier configurato, per ciascuna
-entità elencata al suo interno, viene eseguito lo stesso motore di generazione
-già descritto nelle sottosezioni precedenti, con i parametri propri di quel tier
-(gli stessi utilizzati nella \cref{sec:impl-manual}) e un numero massimo di
-record da generare per quell'entità (\texttt{sample\_size\_per\_entity}). I
-record delle singole entità confluiscono infine in un unico file
-(\cref{sec:impl-split}).
+Per gestire questa eterogeneità, il generatore supporta la definizione di file
+di configurazione esterni in cui le entità vengono raggruppate in insiemi
+omogenei di parametri, denominati \emph{tier}. Tale astrazione evita
+l'applicazione di vincoli uniformi all'intero schema o di ripetitive generazioni
+manuali e permette di rendere le configurazioni riutilizzabili, tracciabili e
+facilmente modificabili. Per ogni entità appartenente a un tier, il motore
+\texttt{BulkDatasetGenerator} viene invocato applicando le impostazioni
+specifiche di quel gruppo e un limite massimo di campioni per entità
+(\texttt{sample\_size\_per\_entity}). I record generati dalle singole entità
+vengono infine aggregati in un unico dataset primario per il successivo processo
+di suddivisione (\cref{sec:impl-split}).
 
-Questa configurazione esterna è esposta, sul lato dell'interfaccia Streamlit,
-tramite un pannello dedicato che permette di caricare il file e ne mostra a
-schermo un riepilogo, con il numero di gruppi e di entità coinvolte, prima di
-abilitare il pulsante di avvio; l'avanzamento della generazione viene poi
-tradotto in una barra di progresso calcolata sul numero di entità completate
-rispetto al totale. L'output finale viene poi reso disponibile direttamente come
-file scaricabile al termine del processo, eliminando così la necessità di un
-qualunque accesso al filesystem del server per chi utilizza lo strumento.
+Nell'interfaccia Streamlit, la gestione dei tier è affidata a un modulo dedicato
+che consente il caricamento del file di configurazione, la verifica preventiva
+dei gruppi e il monitoraggio dell'avanzamento basato sul numero di entità
+elaborate. Al termine del processo, il sistema rende disponibile il dataset
+direttamente per il download, eliminando la necessità di accedere al filesystem
+del server ospitante.
 
-La configurazione dei tier sfrutta una funzione di validazione che non solo
-controlla che ogni gruppo contenga tutte le chiavi richieste, ma anche la
-coerenza dei range di valori selezionati e l'unicità dei nomi dei gruppi; un
-file scritto male viene così respinto subito, con un motivo preciso, invece di
-far fallire la generazione a metà.
+Infine, per garantire la robustezza dell'esecuzione, la configurazione dei tier
+viene sottoposta a una procedura di validazione preventiva. Questa verifica
+accerta la presenza delle chiavi obbligatorie, la validità dei range parametrici
+e l'unicità dei nomi dei gruppi; un file non conforme viene rigettato all'atto
+del caricamento con un'indicazione puntuale dell'errore, prevenendo interruzioni
+anomale nelle fasi avanzate della generazione.
+
+\begin{lstlisting}[language=Python, caption={Esempio minimo di configurazione di un tier da file JSON esterno.}, label={lst:tier-example}]
+[ { "name": "diagnosis_related", "entities": ["Diagnosis", "TNMClassification"],
+  "sample_size_per_entity": 50, "min_relations": 1, "max_relations": 3,
+  "min_paths": 1, "max_paths": 2, "min_properties": 1, "max_properties": 3,
+  "min_values": 1, "max_values": 2 } ]
+\end{lstlisting}
 
 \subsection{Split del dataset}
 \label{sec:impl-split}
@@ -2010,21 +2046,32 @@ sottostante rimangano inalterati (\hyperref[obj:O2]{O2},
 Nelle prime fasi di esplorazione del progetto, la variazione stilistica è stata
 affidata direttamente a un modello linguistico, fornendo il testo in chiaro e
 richiedendone la rielaborazione in diversi registri linguistici (dallo stile
-clinico-formale a quello colloquiale). Questa impostazione ingenua ha tuttavia
-evidenziato severi limiti pratici:
+clinico-formale a quello colloquiale). Per questo compito di generazione è stato
+impiegato il modello \texttt{Gemma4:e2B}\footnote{Google Gemma Open Models: \url{[https://ai.google.dev/gemma](https://ai.google.dev/gemma)}}, selezionato in quanto rappresentativo
+di un ottimo compromesso tra qualità della riformulazione testuale, ridotto
+ingombro computazionale e celerità di inferenza nell'esecuzione locale.
+
+Tuttavia, l'affidamento diretto al modello senza vincoli strutturali si è
+scontrato con i limiti pratici derivanti dall'impiego di un'architettura locale
+di taglia contenuta (\hyperref[vinc:V3]{V3}), vincolo imposto dalla necessità di
+garantire il trattamento riservato dei dati sanitari su infrastruttura locale
+(\hyperref[vinc:V2]{V2}):
+
 \begin{enumerate}
     \item \textbf{Alterazione e perdita di valori clinici
-              (\textit{hallucination}):} Il modello tendeva a modificare o
-          omettere identificativi, date, codici clinici e valori booleani,
+              (\textit{hallucination}):} Sebbene capace di buona fluidità
+          sintattica, il modello locale tendeva a modificare o omettere
+          identificativi, date, codici clinici e valori booleani,
           compromettendo la corrispondenza univoca tra il prompt e i filtri
           della query SPARQL.
     \item \textbf{Instabilità al crescere della complessità:} All'aumentare del
           numero di vincoli e valori presenti nella domanda originale, la
-          qualità della parafrasi degradava rapidamente, portando a omissioni di
-          intere clausole.
-    \item \textbf{Convergenza stilistica:} Lasciato libero, l'LLM tendeva a
-          riproporre le medesime strutture sintattiche ricorrenti, vanificando
-          l'obiettivo di varietà stilistica.
+          capacità del modello di conservare l'intero contesto degradava,
+          portando all'omissione involontaria di intere clausole.
+    \item \textbf{Convergenza stilistica:} Lasciato libero di rielaborare il
+          testo senza una guida rigida, il modello tendeva a riproporre le
+          medesime strutture sintattiche e aperture di frase ricorrenti,
+          vanificando l'obiettivo di varietà stilistica.
 \end{enumerate}
 
 Per superare queste criticità e garantire un tasso di accettazione dei record
@@ -2040,147 +2087,376 @@ realizzano tale architettura.
 \subsection{Mascheramento}
 \label{sec:impl-mask}
 
-Il primo passo di ogni record è la sostituzione di ciascun valore letterale con
-un token opaco (\cref{lst:mask}).
+\subsection{Mascheramento deterministico dei valori}
+\label{sec:impl-masking}
 
-\begin{lstlisting}[language=Python, caption={Generazione dei placeholder e mascheramento del testo a partire dagli span di valore.}, label={lst:mask}]
+Per isolare la struttura sintattica del prompt dai dati puntuali, la prima fase
+della pipeline di \textit{augmentation} sostituisce ogni valore letterale con un
+identificativo opaco del tipo \texttt{[VAL\_XXXX]}, dove \texttt{[XXXX]}, ovvero
+la componente alfanumerica, viene generata dinamicamente (\cref{lst:mask}).
+
+L'alfabeto impiegato per la creazione dei token (\texttt{TOKEN\_ALPHABET})
+esclude deliberatamente i caratteri ambigui (\texttt{I}, \texttt{L}, \texttt{O},
+\texttt{0}, \texttt{1}). Questa scelta nasce da un'evidenza emersa nelle prime
+fasi di test, i modelli di lingua di piccole dimensioni mostravano un'elevata
+frequenza di allucinazione e sostituzione indebita su certi caratteri,
+probabilmente a causa della loro somiglianza visiva nei vettori di embedding. I
+placeholder vengono generati all'interno di un insieme (\texttt{set}) per
+garantire l'assoluta unicità dei token all'interno dello stesso record.
+
+La funzione \texttt{mask} applica le sostituzioni basandosi direttamente sugli
+intervalli posizionali (\textit{spans}) calcolati dal generatore
+(\cref{sec:impl-phrasing}), evitando costose ed errate ricerche per sottostringa
+a posteriori. Infine, per la gestione dei placeholder vengono impiegate due
+espressioni regolari con scopi distinti:
+\begin{itemize}
+    \item \textbf{Versione rigorosa (\texttt{VAL\_RE}):} Riconosce
+          esclusivamente la struttura esatta dei token generati, utilizzata per
+          estrarre e ricomporre i valori autentici;
+    \item \textbf{Versione permissiva (\texttt{LOOSE\_VAL\_RE}):} Rileva
+          varianti sintatticamente storpiate o generate arbitrariamente,
+          impiegata nella successiva fase di validazione per intercettare ed
+          eliminare le allucinazioni del modello (\cref{sec:impl-validation}).
+\end{itemize}
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Generazione dei placeholder escludendo i caratteri ad alta frequenza di allucinazione e mascheramento basato su posizioni.},
+    label={lst:mask}
+]
 TOKEN_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
-def generate_placeholder_tokens(n): tokens = set() while len(tokens) < n:
-    tokens.add("[VAL_" + "".join(random.choices(TOKEN_ALPHABET, k=4)) + "]")
+def generate_placeholder_tokens(n):
+    tokens = set()
+    while len(tokens) < n:
+        token = "[VAL_" + "".join(random.choices(TOKEN_ALPHABET, k=4)) + "]"
+        tokens.add(token)
     return list(tokens)
 
-def mask(text, spans): spans = sorted(spans) tokens =
-    generate_placeholder_tokens(len(spans)) mapping, pieces, cursor = {}, [], 0
+def mask(text, spans):
+    spans = sorted(spans)
+    tokens = generate_placeholder_tokens(len(spans))
+    mapping, pieces, cursor = {}, [], 0
+    
     for (start, end), placeholder in zip(spans, tokens):
-    pieces.append(text[cursor:start]) mapping[placeholder] = text[start:end]
-    pieces.append(placeholder) cursor = end pieces.append(text[cursor:]) return
-    "".join(pieces), mapping
+        pieces.append(text[cursor:start])
+        mapping[placeholder] = text[start:end]
+        pieces.append(placeholder)
+        cursor = end
+        
+    pieces.append(text[cursor:])
+    return "".join(pieces), mapping
 \end{lstlisting}
 
-L'alfabeto dei token esclude deliberatamente i caratteri facilmente confondibili
-tra loro a colpo d'occhio (\texttt{I}, \texttt{L}, \texttt{O}, \texttt{0},
-\texttt{1}); i token vengono generati dentro un insieme (\texttt{set}) finché
-non se ne hanno abbastanza di univoci, escludendo così collisioni tra due
-placeholder nello stesso record. La funzione \texttt{mask} opera direttamente
-sugli span di posizione prodotti dal generatore (\cref{sec:impl-phrasing}),
-tagliando il testo esattamente su quelle coordinate senza alcuna ricerca a
-posteriori. Due funzioni di regex ricorrono in tutto il modulo per riconoscere i
-placeholder, con scopi diversi: una versione rigida (\texttt{VAL\_RE}), che
-combacia solo con il formato esatto appena mostrato, usata per estrarre i
-placeholder autentici da un testo; e una versione permissiva
-(\texttt{LOOSE\_VAL\_RE}), che riconosce anche forme storpiate o inventate,
-usata in fase di validazione per intercettare allucinazioni del modello
-(\cref{sec:impl-validation}).
-
-\subsection{Riformulazione booleana e suggerimenti naturali}
+\subsection{Semplificazione booleana e generazione degli hint}
 \label{sec:impl-boolean-hints}
 
-Non tutti i placeholder attraversano l'intera pipeline di generazione: i valori
-booleani vengono eliminati subito, prima ancora di contattare il modello
-(\cref{lst:boolean}).
+Come anticipato nella fase di design, non tutti i placeholder mascherati
+richiedono l'elaborazione da parte del modello linguistico. I valori booleani
+vengono intercettati ed eliminati prima della fase di inferenza tramite la
+funzione \texttt{simplify\_boolean\_phrasing} (\cref{lst:boolean}).
 
-\begin{lstlisting}[language=Python, caption={Eliminazione anticipata dei placeholder booleani, sostituiti con una forma proposizionale.}, label={lst:boolean}]
-def simplify_boolean_phrasing(text, mapping): new_mapping = dict(mapping) for
-    placeholder, value in mapping.items(): if value.lower() not in {"true",
-    "false"}: continue is_true = value.lower() == "true" repl = r"with \1" if
-    is_true else r"without \1" esc = re.escape(placeholder) stop =
-    r"(?:with|which|and)" which_re = re.compile(rf"\bwhich ((?:(?!{stop}\b)\w+
-    ?){{1,5}}) is {esc}", re.IGNORECASE) with_re = re.compile(rf"\bwith
-    ((?:(?!{stop}\b)\w+ ?){{1,5}}) {esc}", re.IGNORECASE) if
-    which_re.search(text): text = which_re.sub(repl, text) del
-    new_mapping[placeholder] elif with_re.search(text): text = with_re.sub(repl,
-    text) del new_mapping[placeholder] return text, new_mapping
+\begin{lstlisting}[
+    language=Python,
+    caption={Trascrizione proposizionale ed eliminazione preventiva dei placeholder booleani.},
+    label={lst:boolean}
+]
+def simplify_boolean_phrasing(text, mapping):
+    new_mapping = dict(mapping)
+    for placeholder, value in mapping.items():
+        if value.lower() not in {"true", "false"}:
+            continue
+            
+        is_true = value.lower() == "true"
+        repl = r"with \1" if is_true else r"without \1"
+        esc = re.escape(placeholder)
+        stop = r"(?:with|which|and)"
+        
+        which_re = re.compile(
+            rf"\bwhich ((?:(?!{stop}\b)\w+ ?){{1,5}}) is {esc}", 
+            re.IGNORECASE
+        )
+        with_re = re.compile(
+            rf"\bwith ((?:(?!{stop}\b)\w+ ?){{1,5}}) {esc}", 
+            re.IGNORECASE
+        )
+        
+        if which_re.search(text):
+            text = which_re.sub(repl, text)
+            del new_mapping[placeholder]
+        elif with_re.search(text):
+            text = with_re.sub(repl, text)
+            del new_mapping[placeholder]
+            
+    return text, new_mapping
 \end{lstlisting}
 
-Un placeholder che rappresenta un valore vero viene sostituito con \emph{"with"}
-seguito dal termine clinico associato, uno falso con \emph{"without"}; in
-entrambi i casi il placeholder viene rimosso anche dalla mappa restituita, non
-solo dal testo, così il resto della pipeline non si aspetta più di doverlo
-ritrovare. Per tutti gli altri valori mascherati, una funzione separata
-(\texttt{build\_hint\_map}) prepara un suggerimento in linguaggio naturale, in
-ordine di priorità: data ISO trasformata in forma scritta per esteso, numero
-piccolo (fino a 999) trasformato in lettere, etichetta composta con trattino
-ridotta alla sola parte specifica; solo se nessuna di queste regole
-deterministiche si applica, viene interrogato il modello per un sinonimo d'uso
-comune. Questo suggerimento viene usato, con una probabilità configurabile, al
-momento del ripristino finale dei valori (\cref{sec:impl-validation}), e in modo
-differente nella modalità priva di mascheramento (\cref{sec:impl-nomask}).
+La procedura analizza la struttura sintattica che circonda il token: un valore
+booleano affermativo (\texttt{true}) viene convertito nella preposizione
+\emph{"with"} seguita dal termine clinico di riferimento, mentre un valore
+negativo (\texttt{false}) viene convertito in \emph{"without"}. L'operazione
+rimuove il token sia dal testo sia dal dizionario di mappatura
+(\texttt{new\_mapping}), sollevando le fasi successive della pipeline dalla
+necessità di tracciare o ripristinare il valore.
+
+Per tutti i restanti valori mascherati non booleani, il modulo invoca la
+funzione \texttt{build\_hint\_map}, la quale costruisce un suggerimento in
+linguaggio naturale (\textit{hint}) seguendo una gerarchia di regole
+deterministiche ad alta priorità:
+
+\begin{itemize}
+    \item \textbf{Date in formato ISO:} Espresse in forma testuale estesa per
+          preservare la naturalezza della frase;
+    \item \textbf{Valori numerici interi ($< 1000$):} Convertiti dalla notazione
+          cifrata alla corrispettiva forma letterale;
+    \item \textbf{Etichette composte da trattino:} Semplificate isolando la
+          componente terminologica specifica;
+    \item \textbf{Fallback su modello linguistico:} Qualora nessuna delle
+          trasformazioni euristiche sopra descritte sia applicabile, viene
+          eseguita un'interrogazione mirata al modello per estrarre un sinonimo
+          di uso comune nel dominio.
+\end{itemize}
+
+Il suggerimento così generato viene applicato, con una probabilità
+configurabile, sia durante la fase di de-mascheramento e validazione finale
+(\cref{sec:impl-validation}), sia come guida contestuale nella modalità di
+generazione priva di mascheramento (\cref{sec:impl-nomask}).
 
 \subsection{Suddivisione in chunk per record complessi}
 \label{sec:impl-chunk}
 
-Un record con molti valori mascherati viene spezzato in più porzioni prima di
-essere sottoposto al modello, per evitare il degrado di qualità osservato
-empiricamente oltre una certa densità di placeholder in una singola chiamata.
+All'aumentare della densità di placeholder in un singolo prompt, le prestazioni
+del modello linguistico degradano visibilmente, portando a omissioni o alla
+mancata rielaborazione di intere clausole. Per mitigare questo fenomeno, i
+record con un numero elevato di valori mascherati vengono suddivisi in più
+porzioni indipendenti (\textit{chunk}) prima di essere inoltrati al modulo di
+generazione (\cref{lst:chunk}).
 
-\begin{lstlisting}[language=Python, caption={Suddivisione del testo mascherato in chunk, rispettando il vincolo sugli intervalli \emph{between...and...}.}, label={lst:chunk}]
+\begin{lstlisting}[
+    language=Python,
+    caption={Suddivisione in chunk del testo mascherato },
+    label={lst:chunk}
+]
 MAX_VALUES_PER_CHUNK = 12
 
-def split_into_chunks(masked_text, mapping, max_values_per_chunk): clauses =
-    _protect_between(masked_text).split(CLAUSE_SEP) chunks = [[]] count_in_chunk
-    = 0 for clause in clauses: n_values = len(VAL_RE.findall(clause)) if
-    count_in_chunk > 0 and count_in_chunk + n_values > max_values_per_chunk:
-    chunks.append([]) count_in_chunk = 0 chunks[-1].append(clause)
-    count_in_chunk += n_values return [_restore_between(CLAUSE_SEP.join(c)) for
-    c in chunks if c]
+def split_into_chunks(masked_text, mapping, max_values_per_chunk):
+    clauses = _protect_between(masked_text).split(CLAUSE_SEP)
+    chunks = [[]]
+    count_in_chunk = 0
+    
+    for clause in clauses:
+        n_values = len(VAL_RE.findall(clause))
+        if count_in_chunk > 0 and count_in_chunk + n_values > max_values_per_chunk:
+            chunks.append([])
+            count_in_chunk = 0
+        chunks[-1].append(clause)
+        count_in_chunk += n_values
+        
+    return [_restore_between(CLAUSE_SEP.join(c)) for c in chunks if c]
 \end{lstlisting}
 
-Il testo viene diviso in clausole separate dalla congiunzione \emph{"and"},
-accumulate in un chunk finché non si supererebbe la soglia di 12 valori
-(\texttt{MAX\_VALUES\_PER\_CHUNK}); un meccanismo dedicato
-(\texttt{\_protect\_between}/\texttt{\_restore\_between}) sostituisce
-temporaneamente l'\emph{"and"} interno a un intervallo \emph{"between X and Y"}
-con un segnaposto interno che non compare mai per caso in un testo inglese (il
-carattere NUL), impedendo che un intervallo venga spezzato a metà tra due chunk
-diversi. Ogni record con un numero di valori pari o inferiore alla soglia
-produce un solo chunk, e non attraversa quindi alcuna suddivisione: nel dataset
-supplementare da 1331 record generato con vincolo fisso a 4 proprietà per record
-(\cref{sec:impl-tier-config}), l'80,6\% dei record (1073 su 1331) è rimasto in
-un solo chunk, mentre il restante 19,4\% (258 record) è stato diviso in due;
-nessun record ha richiesto più di due chunk, nemmeno quello con più valori in
-assoluto (20 valori, divisi in due chunk da 11 e 9).
+L'algoritmo segmenta il testo basandosi sulle congiunzioni coordinanti
+(\emph{"and"}), aggregando le clausole in un unico chunk fino al raggiungimento
+della soglia massima di 12 token (\texttt{MAX\_VALUES\_PER\_CHUNK}). Per evitare
+la frammentazione incoerente di costrutti sintattici indivisibili, le funzioni
+\texttt{\_protect\_between} e \texttt{\_restore\_between} mascherano
+temporaneamente i connettivi interni alle espressioni di intervallo
+(\emph{"between X and Y"}) sostituendoli con un carattere di controllo
+esadecimale (NUL, \texttt{ASCII 0x00}).
+
+I record il cui conteggio di valori rientra nella soglia limite non subiscono
+alcuna suddivisione. A titolo esemplificativo, nella produzione del dataset da
+1\,331 record generato con vincolo a 4 proprietà (\cref{sec:impl-tier-config}):
+\begin{itemize}
+    \item l'\textbf{80,6\%} dei casi (1\,073 record) ha prodotto un singolo
+          chunk;
+    \item il restante \textbf{19,4\%} (258 record) è stato ripartito esattamente
+          su due chunk;
+    \item nessun record ha necessitato di una frammentazione superiore a due
+          chunk, con un caso limite di 20 token totali suddivisi in due
+          sotto-porzioni rispettivamente da 11 e 9 valori.
+\end{itemize}
+
+\subsection{Ingegneria dei prompt e direttive di riformulazione}
+\label{sec:impl-prompts}
+
+La qualità e la robustezza delle parafrasi prodotte da \texttt{Gemma4:e2B}
+dipendono in modo cruciale dalla struttura dei template di prompt inoltrati al
+modello. Per guidare la generazione garantendo al contempo l'invarianza
+semantica e sintattica, sono stati progettati tre template principali
+(\cref{lst:prompt-templates}):
+
+\begin{itemize}
+    \item \textbf{\texttt{PROMPT\_TEMPLATE}:} Utilizzato per la rielaborazione
+          completa dei prompt mascherati o del primo chunk. Definisce le regole
+          tassative per la conservazione letterale dei token
+          \texttt{[VAL\_XXXX]}, impone lo stile obiettivo, forza l'eliminazione
+          delle ridondanze tipiche dei template rigidi (es. la semplificazione
+          delle catene di navigazione relazionale del grafo) e vieta prefissi o
+          metatesto nell'output.
+    \item \textbf{\texttt{FRAG\-MENT\_\-\texttt{TEM\-PLATE}}:} Impiegato per i
+          chunk successivi al primo (\texttt{as\_fra\-gment=True}). Omette le
+          direttive stilistiche globali per mantenere il registro già stabilito,
+          vieta la punteggiatura finale e impedisce l'inserimento della
+          congiunzione coordinante iniziale (\emph{"and"}), affidandone la
+          gestione al modulo di ricomposizione.
+    \item \textbf{\texttt{NO\_MASK\_TEMPLATE}:} Utilizzato nella modalità di
+          generazione priva di mascheramento dei valori
+          (\cref{sec:impl-nomask}), in cui i valori letterali vengono forniti in
+          chiaro affiancati da suggerimenti stilistici facoltativi
+          (\textit{value hints}).
+\end{itemize}
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Struttura dei template di prompt e funzioni per l'iniezione dinamica del contesto di feedback e storico.},
+    label={lst:prompt-templates}
+]
+PROMPT_TEMPLATE = """Rewrite the following query request as a single reformulation in {language}.
+
+Rules:
+- The text below contains placeholders in square brackets, each one unique: copy each one EXACTLY as it appears, character-for-character.
+- Every single placeholder in the original MUST appear, unchanged, in the reformulation.
+- The original has a rigid template style: REMOVE repetition and phrase naturally.
+- Compress awkward navigation chains (e.g. "which has height with metric unit [VAL]") into natural outcomes ("with a height measured in [VAL]") when intermediate steps add no value.
+- Write it as {style}.
+- Actively vary fact ordering: do not always follow the original traversal order.
+{avoid_history_section}- Keep all clinical meaning exactly intact.
+- Output ONLY the reformulation, nothing else.
+{avoid_section}
+Original: {question}
+
+Reformulation:"""
+
+def build_avoid_history_section(previous_texts: list) -> str:
+    if not previous_texts:
+        return ""
+    items = "\n".join(f'  - "{t}"' for t in previous_texts)
+    return (
+        "- Do NOT reuse the wording, structure, or vocabulary of these previous "
+        f"reformulations written in this same style:\n{items}\n"
+    )
+
+def build_avoid_section(avoid_text: str, reason: str = None) -> str:
+    if not avoid_text:
+        return ""
+    reason_line = f" Specifically, the problem was: {reason}." if reason else ""
+    return (
+        f"\nA previous attempt was rejected.{reason_line} Do NOT repeat this mistake, "
+        f"and do NOT repeat this wording - write something meaningfully different:\n\"{avoid_text}\"\n"
+    )
+\end{lstlisting}
+
+Come mostrato nelle funzioni di supporto \texttt{build\_avoid\_history\_section}
+e \texttt{build\_avoid\_section}, il sistema arricchisce dinamicamente il prompt
+di input:
+\begin{enumerate}
+    \item \textbf{Preventivo anti-convergenza:} Iniettando le strutture
+          sintattiche recentemente generate per lo stesso stile
+          (\texttt{avoid\_history}), costringendo il modello a esplorare
+          percorsi sintattici alternativi.
+    \item \textbf{Feedback reattivo negli errori:} Inserendo nel ciclo di retry
+          il testo scartato e la motivazione esplicita fornita dal validatore
+          (\texttt{avoid\_reason}), trasformando la validazione in un meccanismo
+          di apprendimento in-context guidato.
+\end{enumerate}
 
 \subsection{Generazione iterativa: stile, retry e fallback}
 \label{sec:impl-generation}
 
-Ogni chunk, e successivamente ogni variante completa, viene generato tramite un
-ciclo di tentativi con feedback esplicito sul motivo di un eventuale rifiuto e
-temperatura crescente (\cref{lst:generate-piece}).
+Sfruttando le strutture di prompt e le funzioni di iniezione del contesto
+descritte nella sezione precedente (\cref{sec:impl-prompts}), ogni
+sotto-porzione (\textit{chunk}) e ogni successiva variante completa vengono
+elaborate mediante un ciclo di generazione adattivo. La funzione
+\texttt{generate\_piece} (\cref{lst:generate-piece}) orchestra i tentativi di
+inferenza combinando un campionario a temperatura variabile, l'iniezione
+dinamica del feedback e un meccanismo di fallback di sicurezza.
 
-\begin{lstlisting}[language=Python, caption={Ciclo di generazione e validazione per un singolo chunk, con fallback esplicito in caso di fallimento persistente.}, label={lst:generate-piece}]
-def generate_piece(model, piece_text, piece_mapping, style_desc, max_attempts,
-                    base_temp, max_temp, avoid_history, indent, label,
-                    avoid_text=None, avoid_reason=None, as_fragment=False,
-                    language="English"): total_elapsed = 0.0 for attempt in
-                    range(max_attempts): temperature =
-                    temperature_for_attempt(attempt, max_attempts, base_temp,
-                    max_temp) candidate, elapsed = ( paraphrase_fragment(model,
-                    piece_text, piece_mapping, temperature, language,
-                    avoid_text, avoid_reason) if as_fragment else
-                    paraphrase_one(model, piece_text, piece_mapping, style_desc,
-                    temperature, language, avoid_text, avoid_reason,
-                    avoid_history if attempt == 0 else None) ) total_elapsed +=
-                    elapsed reason = validation_reason(candidate, piece_mapping,
-                    []) if reason is None: return candidate, total_elapsed,
-                    False avoid_text, avoid_reason = candidate, reason return
-                    piece_text, total_elapsed, True
+\begin{lstlisting}[
+    language=Python,
+    caption={Ciclo di generazione e validazione iterativa per un singolo chunk con gestione del fallback.},
+    label={lst:generate-piece}
+]
+def generate_piece(
+    model, piece_text, piece_mapping, style_desc, max_attempts,
+    base_temp, max_temp, avoid_history, indent, label,
+    avoid_text=None, avoid_reason=None, as_fragment=False,
+    language="English"
+):
+    total_elapsed = 0.0
+    for attempt in range(max_attempts):
+        temperature = temperature_for_attempt(
+            attempt, max_attempts, base_temp, max_temp
+        )
+        
+        candidate, elapsed = (
+            paraphrase_fragment(
+                model, piece_text, piece_mapping, temperature, 
+                language, avoid_text, avoid_reason
+            )
+            if as_fragment else
+            paraphrase_one(
+                model, piece_text, piece_mapping, style_desc,
+                temperature, language, avoid_text, avoid_reason,
+                avoid_history if attempt == 0 else None
+            )
+        )
+        
+        total_elapsed += elapsed
+        reason = validation_reason(candidate, piece_mapping, [])
+        
+        if reason is None:
+            return candidate, total_elapsed, False
+            
+        avoid_text, avoid_reason = candidate, reason
+        
+    return piece_text, total_elapsed, True
 \end{lstlisting}
 
-Se il candidato viene rifiutato, il testo scartato e il motivo esatto del
-rifiuto diventano il contesto per il tentativo successivo, mentre la temperatura
-sale linearmente dalla base al massimo configurato
-(\texttt{temperature\_for\_attempt}). Se tutti i tentativi (5 di default)
-falliscono, la funzione non forza comunque un output: restituisce il testo
-originale non modificato, segnalando esplicitamente il ricorso a questo
-comportamento di ripiego. Il primo chunk di un record usa il template completo,
-con l'assegnazione di stile e la cronologia delle aperture di frase recenti da
-evitare; i chunk successivi usano un template più semplice \emph{"a frammento"}
-(\texttt{as\_fragment=True}), senza ripetere l'assegnazione di stile, per
-restare coerenti col registro già stabilito dal primo pezzo. Ogni chunk viene
-validato singolarmente, ma solo sull'integrità dei placeholder: il controllo di
-somiglianza, che richiede un confronto con varianti già accettate, si applica
-soltanto al termine, sul testo ricomposto (\cref{sec:impl-validation}).
+L'esecuzione del ciclo di generazione si articola sulle seguenti logiche
+operative:
+
+\begin{itemize}
+    \item \textbf{Campionamento adattivo e ciclo di feedback:} Per ciascun
+          tentativo (fino a un massimo di \texttt{max\_attempts}, pari a 5 di
+          default), la funzione \texttt{temperature\_for\_attempt} calcola una
+          temperatura di inferenza cresciuta linearmente da \texttt{base\_temp}
+          a \texttt{max\_temp}. Se il candidato prodotto viene respinto dal
+          validatore (\texttt{validation\_reason}), le variabili
+          \texttt{avoid\_text} e \texttt{avoid\_reason} registrano l'output
+          errato e il relativo motivo; tali informazioni vengono automaticamente
+          convertite da \texttt{build\_avoid\_section} ed iniettate nel prompt
+          del tentativo successivo, costringendo il modello a esplorare lo
+          spazio latente in direzioni alternative.
+
+    \item \textbf{Differenziazione tra primo chunk e frammenti successivi:} La
+          generazione applica una diversa strategia a seconda della posizione
+          del chunk. Il primo pezzo viene inviato tramite
+          \texttt{paraphrase\_one} utilizzando il \texttt{PROMPT\_TEMPLATE}
+          completo, comprensivo della descrizione dello stile e della cronologia
+          delle strutture da evitare (\texttt{avoid\_history}). I chunk
+          successivi vengono invece elaborati tramite
+          \texttt{paraphrase\_fragment} (\texttt{as\_fragment=True}), inoltrando
+          il \texttt{FRAGMENT\_TEMPLATE}; questa versione ridotta omette le
+          direttive stilistiche globali e impedisce l'inserimento di
+          congiunzioni o punteggiatura finale, garantendo la continuità
+          sintattica con il primo frammento.
+
+    \item \textbf{Garantismo e fallback deterministico:} Qualora tutti i
+          tentativi consentiti falliscano a causa del persistere di violazioni
+          sintattiche o di allucinazioni sui token, il sistema evita di forzare
+          un testo degradato o incompleto. La funzione restituisce il testo
+          mascherato originale non modificato (\texttt{piece\_text}), impostando
+          il flag di fallback su \texttt{True}. In questo modo, la pipeline
+          garantisce la continuità dell'esecuzione senza introdurre errori nel
+          dataset. \end{itemize}
+
+I controlli effettuati all'interno di \texttt{generate\_piece} sono strettamente
+focalizzati sulla validità strutturale dei singoli chunk (come l'integrità dei
+token di mascheramento). I controlli globali, tra cui il calcolo della
+similarità sintattica rispetto ad altre varianti e il ripristino finale dei
+valori, vengono posticipati alla fase di ricomposizione e validazione
+dell'intero record (\cref{sec:impl-validation}).
 
 \subsection{Validazione: due funzioni per due modalità}
 \label{sec:impl-validation}
@@ -2208,125 +2484,202 @@ def validation_reason(candidate, mapping, accepted_so_far, max_similarity=None):
     return None
 \end{lstlisting}
 
-Il controllo di somiglianza usa
-\texttt{difflib.SequenceMatcher}\footnote{\url{https://docs.python.org/3/library/difflib.html}}
-della libreria standard, con una soglia che dipende dalla lunghezza del testo:
-più permissiva (fino al 97\%) per frasi brevi, più severa (85\%) per frasi
-lunghe, altrimenti testi corti verrebbero quasi sempre scartati come duplicati
-per mancanza di margine di variazione lessicale. Poiché questa funzione riceve
-sempre una lista vuota quando è invocata sui singoli chunk, il controllo di
-somiglianza non si attiva mai a quel livello: è un ciclo su una lista vuota, non
-un controllo disattivato esplicitamente.
+Si parla di soglia di somiglianza adattiva poichè il controllo di somiglianza
+\texttt{difflib.SequenceMatcher}\footnote{\url{https://docs.python.org/3/library/difflib.html}},
+della libreria standard, varia a seconda della lunghezza del testo:
+\begin{itemize}
+    \item più permissiva (fino al 97\%) per frasi brevi
+    \item più severa (85\%) per frasi lunghe
+\end{itemize}
+Questa piccola differenziazione è stata valutata come necessaria durante
+l'implementazione, altrimenti testi corti sarebbero quasi sempre stati scartati
+come duplicati per mancanza di margine di variazione lessicale.
 
-Per la modalità priva di mascheramento (\cref{sec:impl-nomask}) esiste una
-seconda funzione di validazione, più permissiva sul primo controllo: un valore
-non è considerato perso se compare nella sua forma di suggerimento naturale, o
-come sinonimo plausibile case-insensitive, non solo nella sua forma letterale
-esatta, coerentemente col fatto che, in questa modalità, il modello vede il
-valore vero e ha il permesso esplicito di riformularlo.
+Per la modalità di generazione priva di mascheramento (\cref{sec:impl-nomask}),
+il sistema adotta una funzione di validazione dedicata, caratterizzata da un
+criterio di verifica dei valori più flessibile. In questo scenario, poiché il
+modello linguistico opera direttamente sui dati in chiaro con la facoltà
+esplicita di applicarvi varianti stilistiche, un valore letterale non viene
+classificato come omesso qualora compaia nel testo sotto forma di suggerimento
+naturale (\textit{value hint}) o come sinonimo plausibile, valutato mediante un
+confronto \textit{case-insensitive}.
 
 \subsection{Rotazione degli stili e memoria anti-ripetizione}
 \label{sec:impl-styles}
 
-La varietà stilistica tra le varianti di uno stesso record è governata da un
-oggetto che assegna gli stili in sequenza fissa e ricorda le generazioni recenti
-per stile (\cref{lst:style-tracker}).
+La diversificazione stilistica tra le differenti varianti di uno stesso record è
+gestita dalla classe \texttt{StyleTracker} (\cref{lst:style-tracker}), la quale
+assegna i registri espressivi in sequenza ed esegue un tracciamento a finestra
+scorrevole delle generazioni recenti.
 
-\begin{lstlisting}[language=Python, caption={Assegnazione ciclica degli stili e memoria a finestra delle generazioni recenti.}, label={lst:style-tracker}]
-class StyleTracker: def __init__(self, styles=None, recent_size=3,
-    max_chars=160, opener_window=12): self._styles = styles if styles is not
-    None else STYLES self._style_cycle = itertools.cycle(self._styles)
-    self._recent_texts = {tag: [] for tag, _ in self._styles}
-    self._opener_history = {tag: [] for tag, _ in self._styles}
+\begin{lstlisting}[
+    language=Python,
+    caption={Assegnazione ciclica degli stili e tracciamento a finestra delle formulazioni e delle aperture recenti.},
+    label={lst:style-tracker}
+]
+class StyleTracker:
+    def __init__(
+        self, styles=None, recent_size=3, max_chars=160, opener_window=12
+    ):
+        self._styles = styles if styles is not None else STYLES
+        self._style_cycle = itertools.cycle(self._styles)
+        self._recent_texts = {tag: [] for tag, _ in self._styles}
+        self._opener_history = {tag: [] for tag, _ in self._styles}
+        self._recent_size = recent_size
+        self._max_chars = max_chars
+        self._opener_window = opener_window
 
-    def next_style(self): return next(self._style_cycle)
+    def next_style(self):
+        return next(self._style_cycle)
 
-    def remember(self, style_tag, text): sanitized = VAL_RE.sub("...", text)
-        preview = sanitized if len(sanitized) <= self._max_chars else
-        sanitized[:self._max_chars - 3] + "..." bucket =
-        self._recent_texts.setdefault(style_tag, []) bucket.append(preview) del
-        bucket[: -self._recent_size] openers =
-        self._opener_history.setdefault(style_tag, [])
-        openers.append(opener(text)) del openers[: -self._opener_window]
+    def remember(self, style_tag, text):
+        sanitized = VAL_RE.sub("...", text)
+        preview = (
+            sanitized if len(sanitized) <= self._max_chars
+            else sanitized[:self._max_chars - 3] + "..."
+        )
+        
+        bucket = self._recent_texts.setdefault(style_tag, [])
+        bucket.append(preview)
+        del bucket[:-self._recent_size]
+        
+        openers = self._opener_history.setdefault(style_tag, [])
+        openers.append(opener(text))
+        del openers[:-self._opener_window]
 \end{lstlisting}
 
-Gli stili (dieci registri predefiniti, da tecnico-database a colloquiale a
-statistico) vengono assegnati percorrendo un ciclo fisso
-(\texttt{itertools.cycle}\footnote{\url{https://docs.python.org/3/library/itertools.html\#itertools.cycle}}),
-non estratti a caso, per garantire una distribuzione uniforme su un numero
-elevato di record. \texttt{remember} viene chiamata solo su varianti accettate,
-mai su tentativi rifiutati: tiene una finestra delle ultime 3 formulazioni
-complete per stile (con i placeholder ancora presenti sostituiti da
-\texttt{"..."}, per non confrontare mai codici opachi come se fossero testo
-naturale) e una finestra più ampia, le ultime 12, delle sole aperture di frase.
-La finestra qui è più ampia perché le prime due parole di una frase sono
-un'informazione più povera di una frase intera, e richiedono quindi uno storico
-più esteso per intercettare ripetizioni. Le due informazioni sono tenute in due
-dizionari distinti, invece che in un'unica struttura combinata, proprio perché
-servono controlli diversi con finestre di lunghezza diversa: tenerle separate
-evita di dover troncare artificialmente l'una alla lunghezza dell'altra.
+L'assegnazione dei dieci registri linguistici predefiniti (spazianti dal tono
+tecnico-database a quello colloquiale o statistico) avviene deterministicamente
+mediante iterazione circolare
+(\texttt{itertools.cycle}\footnote{\url{https://docs.python.org/3/library/itertools.html\#itertools.cycle}}).
+Tale scelta previene i sbilanciamenti propri di un campionamento casuale,
+assicurando una distribuzione uniforme dei registri sull'intero dataset.
+
+Il metodo \texttt{remember} viene invocato esclusivamente a seguito
+dell'accettazione di una variante, aggiornando due strutture dati distinte per
+ciascun registro:
+
+\begin{itemize}
+    \item \textbf{Storico delle formulazioni complete
+              (\texttt{\_recent\_texts}):} Mantiene una finestra delle ultime 3
+          frasi generate. I token di mascheramento vengono preventivamente
+          sostituiti con un punto di sospensione (\texttt{"..."}) per
+          impedire che gli identificativi opachi alterino la valutazione
+          della similarità testuale.
+    \item \textbf{Storico delle aperture sintattiche
+              (\texttt{\_opener\_history}):} Conserva una finestra più estesa,
+          pari alle ultime 12 sequenze di avvio (\textit{openers}).
+          Trattandosi di un'informazione a minore entropia rispetto alla
+          frase intera, richiede uno storico più ampio per intercettare e
+          neutralizzare pattern di incipit ricorrenti.
+\end{itemize}
+
+Il disaccoppiamento dei due tracciamenti in dizionari separati consente di
+applicare metriche di controllo e orizzonti temporali differenti, evitando
+riduzioni o troncamenti artificiali della memoria del modello.
 
 \subsection{Statistiche di qualità e resilienza}
 \label{sec:impl-stats}
 
-Ogni run accumula un insieme di contatori che permettono, a posteriori, di
-distinguere una variante uscita pulita da una uscita con un fallback, da una
-richiesta di variante che non ha prodotto nulla.
+Al fine di monitorare la qualità del processo di sintesi e garantire un confronto
+tra le generazioni, ciascuna esecuzione della pipeline accumula
+un insieme di metriche strutturate. Tali contatori permettono di tracciare la
+resa qualitativa delle varianti generate, distinguendo le formulazioni prodotte
+con successo da quelle derivanti da un meccanismo di fallback o dai fallimenti
+definitivi (\cref{lst:qa-stats}).
 
-\begin{lstlisting}[language=Python, caption={Calcolo della resa complessiva di un run, a partire dagli slot totali e da quelli completamente falliti.}, label={lst:qa-stats}]
-def to_dict(self): slots_failed = len(self.failed_slots) yield_rate = (1 -
-    (slots_failed / self.total_slots)) if self.total_slots else None return {
-    "total_slots": self.total_slots, "slots_failed": slots_failed, "yield_rate":
-    yield_rate, "fallback_count": self.fallback_count, "style_attempts":
-    dict(self.style_attempts), "style_accepted": dict(self.style_accepted),
-    "failed_slots": self.failed_slots, }
+\begin{lstlisting}[
+    language=Python,
+    caption={Calcolo della resa complessiva del processo di generazione e serializzazione delle metriche di qualità.},
+    label={lst:qa-stats}
+]
+def to_dict(self):
+    slots_failed = len(self.failed_slots)
+    yield_rate = (
+        (1 - (slots_failed / self.total_slots)) 
+        if self.total_slots else None
+    )
+    return {
+        "total_slots": self.total_slots,
+        "slots_failed": slots_failed,
+        "yield_rate": yield_rate,
+        "fallback_count": self.fallback_count,
+        "style_attempts": dict(self.style_attempts),
+        "style_accepted": dict(self.style_accepted),
+        "failed_slots": self.failed_slots,
+    }
 \end{lstlisting}
 
-\texttt{fallback\_count} conta le varianti uscite comunque, ma con almeno un
-chunk non riformulato; \texttt{failed\_slots} registra invece le richieste di
-variante per cui, dopo aver esaurito i tentativi esterni di rigenerazione
-completa (non solo i tentativi per singolo chunk), non si è prodotto nulla; per
-ciascuna, viene conservato anche il dettaglio di ogni tentativo fallito e il
-relativo motivo. Le statistiche vengono salvate su disco dopo ogni record
-processato, non solo a fine run: un'esecuzione interrotta e ripresa continua ad
-accumulare sugli stessi contatori invece di ripartire da zero. Allo stesso scopo
-di resilienza, l'elenco dei \texttt{source\_id} già presenti nel file di output
-viene ricostruito a ogni avvio, così che i record già completati vengano saltati
-in caso di ripresa dopo un'interruzione (\emph{RNF2}).
+Il monitoraggio delle prestazioni si basa su tre indicatori principali:
+
+\begin{itemize}
+    \item \textbf{Tasso di resa (\texttt{yield\_rate}):} Esprime la quota di
+          varianti generate con successo rispetto al totale degli slot richiesti
+          (\texttt{total\_slots}).
+    \item \textbf{Conteggio dei fallback (\texttt{fallback\_count}):} Traccia le
+          varianti valide in cui almeno un chunk non è stato rielaborato dal modello
+          ed è stato ripristinato nella forma originale per garantire la correttezza
+          del record.
+    \item \textbf{Slot falliti (\texttt{failed\_slots}):} Registra le richieste
+          di variante per le quali, al termine di tutti i tentativi di rigenerazione
+          previsti, non è stato possibile produrre un testo conforme. Per ciascun
+          fallimento, la struttura dati conserva il tracciamento dettagliato dei
+          tentativi e le relative cause di rifiuto.
+\end{itemize}
+
+Per soddisfare i requisiti di tolleranza ai guasti (\hyperref[rnf:RNF2]{RNF2}),
+le statistiche vengono serializzate su disco a seguito dell'elaborazione di
+ogni singolo record, in questo modo, in caso di interruzione imprevista
+dell'esecuzione, un eventuale riavvio della pipeline non azzera i contatori ma
+riprende lo stato accumulato. Parallelamente, un meccanismo di ripresa
+automatica analizza i dati già salvati, ricostruendo l'elenco degli
+identificativi (\texttt{source\_id}) completati ed evitando la rielaborazione
+ridondante dei record.
 
 \subsection{La modalità senza mascheramento}
 \label{sec:impl-nomask}
 
-Il sistema conserva, per ciascun record, anche un percorso di generazione
-alternativo che riproduce il comportamento pre-mascheramento: il testo intero
-viene sottoposto al modello con i valori veri elencati esplicitamente, senza
-alcuna suddivisione in chunk (\cref{lst:nomask}).
+Come anticipato il sistema conserva, per ciascun record, anche un percorso di
+generazione alternativo che sottopone il testo intero privo di mascheramento al
+modello con i valori veri elencati esplicitamente, senza alcuna suddivisione in
+chunk (\cref{lst:nomask}).
 
-\begin{lstlisting}[language=Python, caption={La modalità senza mascheramento, mantenuta come termine di paragone esplicito e non come percorso di produzione alternativo.}, label={lst:nomask}]
-def generate_variant_no_mask(model, text, values, style_tag, style_desc,
-                              max_attempts, base_temp, max_temp, avoid_history,
-                              slot_label, avoid_text=None, avoid_reason=None,
-                              language="English", hints=None): # Deliberately no
-                              chunking here: this mode exists to reproduce the #
-                              pre-masking, single-shot behavior for direct
-                              comparison, not to be a # second production path.
-                              hints = hints or {} identity_mapping = {v: v for v
-                              in values} value_list = ", ".join(f'"{v}"' for v
-                              in values) ... reason =
-                              validation_reason_with_hints(candidate, values,
-                              hints, [])
+\begin{lstlisting}[
+    language=Python,
+    caption={Implementazione della modalità baseline senza mascheramento per il confronto sperimentale.},
+    label={lst:nomask}
+]
+def generate_variant_no_mask(
+    model, text, values, style_tag, style_desc,
+    max_attempts, base_temp, max_temp, avoid_history,
+    slot_label, avoid_text=None, avoid_reason=None,
+    language="English", hints=None
+):
+    # Deliberately no chunking here: this mode exists to reproduce
+    # the pre-masking, single-shot behavior for direct comparison,
+    # not to be a second production path.
+    hints = hints or {}
+    identity_mapping = {v: v for v in values}
+    value_list = ", ".join(f'"{v}"' for v in values)
+    
+    # ... ciclo di retry e formattazione del prompt ...
+    
+    reason = validation_reason_with_hints(
+        candidate, values, hints, []
+    )
 \end{lstlisting}
 
-Il commento nel codice sorgente è esplicito sul ruolo di questa modalità: non un
-secondo percorso di produzione, ma un termine di paragone diretto per
-quantificare in valutazione il beneficio del mascheramento
-(\cref{chap:evaluation}). L'evidenza raccolta in un run diagnostico su questa
-modalità conferma empiricamente la scelta progettuale discussa in
-\cref{chap:progettazione}: su 41 rifiuti registrati nel log di un run limitato a
-due record, 36 (87,8\%) erano dovuti a valori letterali persi o alterati dal
-modello: un esito reso strutturalmente impossibile dal mascheramento, dato che
-in quella modalità il modello non ha mai accesso al valore reale durante la
-riformulazione.
+Durante la produzione del dataset qusto tipo di generazione non è stata
+utilizzata, rappresenta quindi non un secondo percorso di produzione, ma un
+termine di paragone diretto per valutare il beneficio del mascheramento
+(\cref{chap:evaluation}). L'evidenza raccolta durante un'esecuzione diagnostica
+su questa modalità conferma empiricamente le scelte progettuali presentate nel
+\cref{chap:progettazione}. Su un totale di 41 rifiuti registrati nel log di un
+test condotto su due record, ben 36 casi (pari all'87,8\%) sono stati causati
+dalla perdita o dall'alterazione dei valori letterali da parte del modello. Tale
+criticità viene resa strutturalmente impossibile dall'approccio basato su
+mascheramento, in quanto il modello non ha mai accesso ai valori reali durante
+la fase di riformulazione.
 
 \chapter{Valutazione}
 \label{chap:evaluation}
@@ -2532,7 +2885,7 @@ configurazioni e analizzando la natura degli errori residui.
 
 \subsubsection{Metodologia}
 
-Il modello impiegato è Gemma 3 270M, adattato tramite LoRA
+Il modello impiegato è \texttt{Gemma3:270M}, adattato tramite LoRA
 (\cref{sec:peft-lora}) su un insieme di addestramento coerente con quello
 descritto in \cref{sec:eval-dataset-stats}. La metrica principale è
 l'\emph{exact match}, la percentuale di query generate identiche carattere per
@@ -2750,7 +3103,7 @@ prestazioni reali del modello.
 LoRA con il full fine-tuning (\cref{sec:eval-experimental}), ma non ha testato
 QLoRA, pure introdotta in \cref{sec:peft-lora} come tecnica in grado di ridurre
 ulteriormente l'occupazione di memoria rispetto a LoRA; allo stesso modo, non
-sono stati testati modelli di base diversi da Gemma 3 270M, di dimensioni
+sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di dimensioni
 maggiori o architettura differente, che potrebbero offrire una migliore capacità
 di generalizzazione a scapito di un costo computazionale più elevato.
 
@@ -2767,10 +3120,5 @@ iniziali della pipeline.
 
 \bibliographystyle{alpha}
 \bibliography{bibliography}
-
-\begin{acknowledgements} % opzionale, max 1 pagina -- cancella il blocco se non
-    la vuoi
-    % TODO: opzionale
-\end{acknowledgements}
 
 \end{document}
