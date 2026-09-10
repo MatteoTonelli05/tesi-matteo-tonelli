@@ -1070,7 +1070,7 @@ design del modulo integra due strategie specifiche:
           scelta risolve il problema della naturalezza espressiva senza delegare
           al modello la gestione del valore di verità.
 
-    \item \textbf{Decomposizione in porzioni ad alta densità (Chunking):}
+    \item \textbf{Decomposizione in porzioni ad alta densità (C nking):}
           All'aumentare del numero di segnaposto in un singolo prompt, la
           capacità del modello di conservare ed elaborare tutti i token opachi
           degrada, aumentando il tasso di allucinazioni o l'omissione
@@ -2047,7 +2047,10 @@ Nelle prime fasi di esplorazione del progetto, la variazione stilistica è stata
 affidata direttamente a un modello linguistico, fornendo il testo in chiaro e
 richiedendone la rielaborazione in diversi registri linguistici (dallo stile
 clinico-formale a quello colloquiale). Per questo compito di generazione è stato
-impiegato il modello \texttt{Gemma4:e2B}\footnote{Google Gemma Open Models: \url{[https://ai.google.dev/gemma](https://ai.google.dev/gemma)}}, selezionato in quanto rappresentativo
+impiegato il modello
+\texttt{Gemma4:e2B}\footnote{\url{[https://ai.google.dev/gemma](https://ai.google.dev/gemma)}},
+eseguito in locale tramite il runtime di inferenza
+Ollama\footnote{\url{https://ollama.com}}, selezionato in quanto rappresentativo
 di un ottimo compromesso tra qualità della riformulazione testuale, ridotto
 ingombro computazionale e celerità di inferenza nell'esecuzione locale.
 
@@ -2722,7 +2725,7 @@ sua versione iniziale, escludeva dal tentativo di generazione del sinonimo i
 valori corrispondenti al pattern di un codice, riconosciuto tramite un prefisso
 testuale seguito dal carattere due punti; tale riconoscimento, tuttavia, era
 limitato a prefissi composti interamente da lettere, ed escludeva correttamente
-prefissi quali quello della nomenclatura SNOMED, ma non il prefisso della
+prefissi quali quello della nomenclatura SNOMED\footnote{\url{[https://www.snomed.org/](https://www.snomed.org/)}}, ma non il prefisso della
 classificazione ICD-10, che contiene anche cifre. Come conseguenza, un medesimo
 codice ICD-10 è stato tradotto, in varianti diverse dello stesso record, in nomi
 di patologie non corrispondenti al codice originale e reciprocamente incoerenti
