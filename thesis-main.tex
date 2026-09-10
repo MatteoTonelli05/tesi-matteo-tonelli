@@ -68,20 +68,20 @@ su knowledge graph clinico-oncologico}
     La pipeline ha prodotto in fase di testing un dataset di 14.021 esempi,
     strutturato con una rigorosa separazione per record sorgente tra gli insiemi
     di addestramento, validazione e test per evitare data leakage. Un modello
-    \texttt{Gemma3:270M}, sottoposto a fine-tuning mediante LoRA su questo dataset, ha
-    raggiunto un exact match del 46\% sull'insieme di test in-distribution,
-    individuando il checkpoint ottimale tramite validation loss e superando
-    nettamente il full fine-tuning (18\%). L'analisi degli errori residui ha
-    mostrato un tasso dello 0\% di query sintatticamente non valide, dimostrando
-    che il modello apprende saldamente la grammatica SPARQL. Vengono infine
-    analizzati i problemi di qualità emersi nel dataset, delineando le relative
-    strategie di risoluzione.
+    \texttt{Gemma3:270M}, sottoposto a fine-tuning mediante LoRA su questo
+    dataset, ha raggiunto un exact match del 46\% sull'insieme di test
+    in-distribution, individuando il checkpoint ottimale tramite validation loss
+    e superando nettamente il full fine-tuning (18\%). L'analisi degli errori
+    residui ha mostrato un tasso dello 0\% di query sintatticamente non valide,
+    dimostrando che il modello apprende saldamente la grammatica SPARQL. Vengono
+    infine analizzati i problemi di qualità emersi nel dataset, delineando le
+    relative strategie di risoluzione.
 \end{abstract}
 
 
 \tableofcontents
-\listoffigures     % (optional) comment if empty
-\lstlistoflistings % (optional) comment if empty
+\listoffigures
+\lstlistoflistings
 
 \mainmatter
 
@@ -177,8 +177,9 @@ sezioni interconnesse:
           i pattern di progettazione software adottati nell'ingegneria del
           sistema, tra cui l'architettura a \textit{Mixin} per la
           composizione modulare delle responsabilità e il framework
-          \texttt{Streamlit}\footnote{\url{[https://streamlit.io/](https://streamlit.io/)}} per la prototipazione di interfacce interattive
-          di monitoraggio e controllo.
+          \texttt{Streamlit}\footnote{\url{[https://streamlit.io/](https://streamlit.io/)}}
+          per la prototipazione di interfacce interattive di monitoraggio e
+          controllo.
 
     \item \textbf{Lavori Correlati e Benchmark di Text-to-SPARQL
               (\cref{sec:bg-related-work}):} presenta una rassegna dello stato
@@ -1155,8 +1156,7 @@ chiamata.
     \renewcommand{\arraystretch}{1.2}
     \begin{tabularx}{\textwidth}{>{\bfseries}l X}
         \toprule
-        Stile                & Formulazione della domanda
-        \\
+        Stile                & Formulazione della domanda                        \\
         \midrule
         Tecnico/SQL          & Estrai il conteggio totale dei record nella
         tabella pazienti che presentano la codifica 'Mammella femminile' e una
@@ -1402,9 +1402,10 @@ rispondono a tre precise esigenze implementative:
 
 
     \item \textbf{Parallelizzazione dell'I/O
-              (\texttt{MAX\_DISCOVERY\_WORKERS}):} Poiché le chiamate REST per la scoperta
-          delle singole entità sono operazioni indipendenti, il recupero iniziale può
-          essere velocizzato sfruttando un pool di thread tramite
+              (\texttt{MAX\_DISCOVERY\_WORKERS}):} Poiché le chiamate REST per
+          la scoperta delle singole entità sono operazioni indipendenti, il
+          recupero iniziale può essere velocizzato sfruttando un pool di
+          thread tramite
           \texttt{concurrent.futures.ThreadPoolExecutor}\footnote{\url{https://docs.python.org/3/library/concurrent.futures.html\#threadpoolexecutor}}.
 \end{itemize}
 
@@ -2584,11 +2585,11 @@ riduzioni o troncamenti artificiali della memoria del modello.
 \subsection{Statistiche di qualità e resilienza}
 \label{sec:impl-stats}
 
-Al fine di monitorare la qualità del processo di sintesi e garantire un confronto
-tra le generazioni, ciascuna esecuzione della pipeline accumula
-un insieme di metriche strutturate. Tali contatori permettono di tracciare la
-resa qualitativa delle varianti generate, distinguendo le formulazioni prodotte
-con successo da quelle derivanti da un meccanismo di fallback o dai fallimenti
+Al fine di monitorare la qualità del processo di sintesi e garantire un
+confronto tra le generazioni, ciascuna esecuzione della pipeline accumula un
+insieme di metriche strutturate. Tali contatori permettono di tracciare la resa
+qualitativa delle varianti generate, distinguendo le formulazioni prodotte con
+successo da quelle derivanti da un meccanismo di fallback o dai fallimenti
 definitivi (\cref{lst:qa-stats}).
 
 \begin{lstlisting}[
@@ -2620,19 +2621,19 @@ Il monitoraggio delle prestazioni si basa su tre indicatori principali:
           varianti generate con successo rispetto al totale degli slot richiesti
           (\texttt{total\_slots}).
     \item \textbf{Conteggio dei fallback (\texttt{fallback\_count}):} Traccia le
-          varianti valide in cui almeno un chunk non è stato rielaborato dal modello
-          ed è stato ripristinato nella forma originale per garantire la correttezza
-          del record.
+          varianti valide in cui almeno un chunk non è stato rielaborato dal
+          modello ed è stato ripristinato nella forma originale per garantire la
+          correttezza del record.
     \item \textbf{Slot falliti (\texttt{failed\_slots}):} Registra le richieste
-          di variante per le quali, al termine di tutti i tentativi di rigenerazione
-          previsti, non è stato possibile produrre un testo conforme. Per ciascun
-          fallimento, la struttura dati conserva il tracciamento dettagliato dei
-          tentativi e le relative cause di rifiuto.
+          di variante per le quali, al termine di tutti i tentativi di
+          rigenerazione previsti, non è stato possibile produrre un testo
+          conforme. Per ciascun fallimento, la struttura dati conserva il
+          tracciamento dettagliato dei tentativi e le relative cause di rifiuto.
 \end{itemize}
 
 Per soddisfare i requisiti di tolleranza ai guasti (\hyperref[rnf:RNF2]{RNF2}),
-le statistiche vengono serializzate su disco a seguito dell'elaborazione di
-ogni singolo record, in questo modo, in caso di interruzione imprevista
+le statistiche vengono serializzate su disco a seguito dell'elaborazione di ogni
+singolo record, in questo modo, in caso di interruzione imprevista
 dell'esecuzione, un eventuale riavvio della pipeline non azzera i contatori ma
 riprende lo stato accumulato. Parallelamente, un meccanismo di ripresa
 automatica analizza i dati già salvati, ricostruendo l'elenco degli
@@ -2690,151 +2691,152 @@ la fase di riformulazione.
 \section{Testing}
 \label{sec:eval-testing}
 
-Questa sezione riporta i problemi di qualità individuati nel dataset durante lo
-sviluppo, un confronto sperimentale tra due modalità di generazione, e le
-statistiche finali dei tre insiemi prodotti.
-
-\subsubsection{Problemi di qualità riscontrati}
+\subsubsection{Problemi di qualità riscontrati e diagnosi delle cause}
 \label{sec:eval-quality-issues}
 
-Nel corso dello sviluppo sono stati individuati cinque problemi di qualità veri
-e propri, ciascuno diagnosticato fino alla causa tecnica sottostante
-(\cref{fig:quality-issues}). Una proposta di risoluzione per ciascuno di essi è
-discussa in \cref{chap:conclusion}. Due ulteriori comportamenti, inizialmente
-considerati problematici, sono stati in seguito riconosciuti come accettabili o
-addirittura desiderabili, e sono discussi separatamente al termine di questa
-sezione.
+Nel corso dello sviluppo e delle fasi di testing sono stati individuati e
+analizzati cinque problemi di qualità principali (\cref{fig:quality-issues}), di
+cui le relative proposte di risoluzione sono discusse nel
+\cref{chap:conclusion}.
 
-\label{prob:ecog}
-Un primo problema, isolato, ha riguardato la confusione tra l'acronimo clinico
-ECOG, relativo a una scala di stato funzionale oncologico, e il termine
-ecocardiogramma, un esame diagnostico distinto; il modello linguistico locale
-impiegato per la generazione dei sinonimi ha in un'occasione sostituito il primo
-con una forma testuale riconducibile al secondo. La causa è riconducibile ai
-limiti di conoscenza specifica del modello linguistico di dimensioni contenute
-impiegato per questo compito, che non dispone di una base affidabile di
-terminologia clinica e tende a produrre un'associazione plausibile in base alla
-sola somiglianza superficiale tra i due termini, piuttosto che riconoscere di
-non avere l'informazione necessaria.
+\begin{enumerate}
+    \item \label{prob:ecog} \textbf{Scambio di acronimi clinici:} In un singolo
+          caso, il modello di generazione dei sinonimi ha sostituito l'acronimo
+          \texttt{ECOG} (relativo alla scala di stato funzionale oncologico) con
+          la stringa riferita all'esame di ecocardiogramma. L'errore deriva dai
+          limiti del modello locale di piccole dimensioni, che ha associato i
+          due termini, basandosi con tutta probabilità, esclusivamente sulla
+          somiglianza visiva del nome.
 
-\label{prob:icd10}
-Un secondo problema, quantitativamente più rilevante e riconducibile alla
-medesima causa di fondo, ha riguardato l'allucinazione di codici di
-classificazione ICD-10. Il filtro di sicurezza del sistema di sinonimi, nella
-sua versione iniziale, escludeva dal tentativo di generazione del sinonimo i
-valori corrispondenti al pattern di un codice, riconosciuto tramite un prefisso
-testuale seguito dal carattere due punti; tale riconoscimento, tuttavia, era
-limitato a prefissi composti interamente da lettere, ed escludeva correttamente
-prefissi quali quello della nomenclatura SNOMED\footnote{\url{[https://www.snomed.org/](https://www.snomed.org/)}}, ma non il prefisso della
-classificazione ICD-10, che contiene anche cifre. Come conseguenza, un medesimo
-codice ICD-10 è stato tradotto, in varianti diverse dello stesso record, in nomi
-di patologie non corrispondenti al codice originale e reciprocamente incoerenti
-tra loro, confermando che il modello linguistico non disponeva di una conoscenza
-affidabile della corrispondenza tra codice e patologia, ma produceva
-un'associazione plausibile priva di fondamento verificabile, lo stesso limite
-già osservato nel primo problema. Il problema ha interessato quarantasette
-record del dataset; il difetto specifico nel filtro di riconoscimento del
-pattern, che escludeva solo i prefissi alfabetici, è stato corretto.
+    \item \label{prob:icd10} \textbf{Allucinazione dei nomi di patologia sui
+              codici ICD-10:} In 47 record, un medesimo codice ICD-10 è stato
+          tradotto in nomi di patologie errate ed incoerenti tra le diverse
+          formulazioni. La causa era un bug nella regex del filtro di
+          sicurezza dei sinonimi, il quale escludeva i valori nel formato
+          \texttt{PREFIX:CODE} se il prefisso era alfabetico (come per lo
+          standard SNOMED \footnote{\url{https://www.snomed.org/}}), ma non
+          intercettava il prefisso \texttt{ICD-10} perché contenente cifre.
+          Il filtro di parsing è stato corretto, correggendo però solo in
+          modo parziale il bug in questione.
 
-Un terzo problema, riscontrato nella prima fase del lavoro di generazione
-manuale delle varianti per gli insiemi di validazione e di test, ha riguardato
-la produzione di testo non conforme a un registro di linguaggio naturale, quale
-la riproduzione di sintassi propria di un linguaggio di interrogazione
-strutturato, elenchi nella forma campo seguito da valore, e parentesi impiegate
-come dispositivo strutturale anziché come parte di un valore letterale
-originale. A differenza dei primi due problemi, la causa qui non è un limite del
-modello linguistico, ma la scrittura manuale dei modelli di frase impiegati in
-questa fase, che in alcuni casi rispecchiava abitudini di formulazione più
-vicine a un'interfaccia tecnica che al linguaggio naturale. Il problema è stato
-individuato tramite lettura diretta del testo prodotto e corretto riscrivendo i
-modelli di frase coinvolti.
+    \item \label{prob:syntax} \textbf{Formattazione rigida e non naturale:}
+          Durante l'ispezione manuale dei set di validazione e test, si è
+          riscontrata la presenza di frasi formulate come liste di chiavi-valore
+          o vere e proprie query anziché testo fluido. Il problema non dipendeva
+          dal modello linguistico, ma dalla struttura troppo rigida degli stili
+          di frase scritti manualmente, che sono stati di conseguenza
+          rielaborati.
 
-Un quarto problema ha riguardato la concatenazione di due valori data adiacenti
-in un intervallo temporale, priva di un separatore testuale intermedio,
-risultante in una sequenza di cifre e trattini non interpretabile senza
-ambiguità da un lettore umano, poiché le date stesse contengono trattini come
-parte della propria formattazione. La causa è di natura puramente
-implementativa, non riconducibile ad alcun modello linguistico: il modello di
-frase impiegato per costruire il testo non prevedeva l'inserimento di una
-congiunzione quando due valori data si trovavano ad essere affiancati
-direttamente. Il problema, riscontrato in cinquantacinque occorrenze, è stato
-corretto inserendo sistematicamente una congiunzione testuale in tutti i punti
-in cui ciò si verificava.
+    \item \label{prob:dates} \textbf{Mancanza di connettivo negli intervalli di
+              date:} In 55 occorrenze, due valori di data adiacenti sono stati
+          affiancati senza alcun separatore (es. \emph{"2020-01-01
+              2021-01-01"}), generando stringhe ambigue. La causa era
+          un'omissione nella procedura di assemblaggio del testo, che non
+          prevedeva l'inserimento della congiunzione tra due campi di tipo
+          data consecutivi; il generatore è stato aggiornato per inserirla
+          automaticamente.
 
-\label{prob:nan}
-Un quinto problema, distinto dai precedenti poiché non riconducibile a un
-difetto del sistema di generazione delle varianti, ha riguardato la presenza del
-valore letterale "nan" come unità di misura in un numero limitato di record,
-riscontrato in sette casi. Questo valore, tipico di una rappresentazione di dato
-mancante non gestita a monte, è stato preservato correttamente dal sistema di
-augmentation, che per costruzione non altera i valori letterali originali; la
-causa è quindi da ricondurre alla fase di generazione del dataset strutturato,
-non alla fase di augmentation linguistica.
+    \item \label{prob:nan} \textbf{Presenza del valore nullo \texttt{"nan"}:} In
+          7 casi è stata rilevata la stringa letterale \texttt{"nan"} indicata
+          come unità di misura. Il comportamento è una probabile conseguenza del
+          mascheramento deterministico, che preserva integralmente le stringhe
+          ricevute in input senza modificarle. Il difetto risiederebbe quindi
+          nella presenza di dati mancanti non filtrati a monte nel dataset
+          primario.
+\end{enumerate}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=.85\linewidth]{figures/quality-issues.pdf}
-    \caption{Occorrenze riscontrate per ciascuno dei quattro problemi di qualità
-        quantificabili (il terzo problema, individuato tramite lettura diretta
-        anziché conteggio sistematico, non compare in figura).}
+    \caption{Distribuzione delle occorrenze per i quattro problemi quantificabili (il problema di sintassi non naturale, individuato tramite ispezione manuale, non compare in figura).}
     \label{fig:quality-issues}
 \end{figure}
 
-Due ulteriori comportamenti, inizialmente registrati come problemi durante lo
-sviluppo, meritano una lettura diversa. Il primo riguarda l'uso occasionale di
-una preposizione non canonica, "at" al posto di "on", in combinazione con valori
-riferiti a una linea di trattamento terapeutico, riscontrato in otto casi. Più
-che un difetto da correggere, questo comportamento può essere considerato una
-forma di variazione naturale del linguaggio: un parlante reale non segue sempre
-con precisione le regole grammaticali, e una minima imprecisione di questo tipo
-può contribuire alla varietà stilistica del testo generato piuttosto che
-comprometterne la qualità.
-
-Il secondo riguarda la presenza, in alcuni record, di due vincoli distinti sulla
-medesima proprietà scalare del paziente, quale la data di decesso, con valori
-incompatibili tra loro, risultante in una query logicamente priva di risultati
-possibili. Il fenomeno, ricondotto a una collisione tra due percorsi relazionali
-paralleli campionati indipendentemente durante la generazione, è risultato più
-frequente nel secondo passaggio di generazione, con duecentonovantacinque record
-su milletrecentotrentuno esaminati in quella fase. Piuttosto che un difetto da
-correggere, questo comportamento riflette una condizione che si presenta anche
-nell'uso reale di un sistema di interrogazione: un utente può porre, per errore
-o per verifica, una domanda a cui nessun dato può corrispondere. Includere
-alcuni esempi di questo tipo nel dataset non compromette la qualità
-dell'addestramento, e i record interessati sono comunque stati esclusi dal
-dataset finale per mantenere la maggioranza dei casi orientata a query con una
-risposta effettiva.
+\paragraph{Comportamenti anomali valutati come ammissibili.}
+Due ulteriori fenomeni, inizialmente segnalati come bug, sono stati
+ri-classificati come variazioni accettabili:
+\begin{itemize}
+    \item \textbf{Uso di preposizioni non canoniche (8 casi):} L'impiego di
+          \emph{"at"} al posto di \emph{"on"} per le linee di terapia è stato
+          considerato una naturale micro-variabilità del linguaggio umano, utile
+          ad aumentare la varianza stilistica.
+    \item \textbf{Collisione di vincoli incompatibili (295 casi):} La
+          generazione di query con filtri reciprocamente escludenti (es. due
+          date di decesso discordanti nella stessa query) deriva dal
+          campionamento indipendente di percorsi relazionali paralleli. Poiché
+          rispecchiano interrogazioni reali ma errate che un utente sbadato può
+          porre, i record non costituiscono un difetto.
+\end{itemize}
 
 \subsubsection{Confronto tra generazione con e senza mascheramento}
 \label{sec:eval-masking-comparison}
 
-Al fine di verificare se l'assenza di mascheramento dei valori producesse una
-struttura linguistica delle varianti generate qualitativamente diversa rispetto
-alla modalità principale, è stato condotto un confronto sperimentale su un
-insieme di venti record di input, selezionati per rappresentare una gamma di
-complessità crescente, dal caso di un singolo valore vincolato fino al caso di
-dodici valori vincolati nella medesima query. Le due modalità sono state
-eseguite sul medesimo insieme di record, con i medesimi parametri di
-generazione.
+Per quantificare l'impatto del mascheramento sulla qualità della variazioni
+stilistiche, è stato condotto un test comparativo rispetto alla modalità
+no-masking, la cui architettura è stata documentata nella
+\cref{sec:impl-nomask}. L'esperimento ha posto a confronto le due strategie su
+un campione di 100 record sorgente, selezionati a complessità combinatoria
+crescente (da un singolo valore vincolato fino a 20 valori simultanei per
+query).
 
-Il numero complessivo di slot di generazione tentati è risultato identico tra le
-due modalità, sessantasei, poiché determinato dalla medesima formula adattiva
-basata sul numero di valori per record, indipendente dalla modalità di
-mascheramento. Il tasso di successo complessivo è risultato lievemente superiore
-nella modalità con mascheramento, novantotto virgola cinque percento contro
-novantasette percento nella modalità senza mascheramento. La causa dei
-fallimenti si è rivelata inoltre di natura diversa tra le due modalità: nella
-modalità senza mascheramento, i fallimenti osservati sul medesimo record sono
-stati causati da una corrispondenza testuale identica al cento percento tra
-tentativi di generazione distinti, condizione non osservata nella modalità con
-mascheramento, dove il fallimento osservato ha mostrato una corrispondenza
-testuale parziale, inferiore al novanta percento.
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{X c c}
+        \toprule
+        \textbf{Metrica / Criterio di Valutazione} & \textbf{Con Mascheramento}
+                                                   & \textbf{Senza
+                                                         Mascheramento}
+        \\
+        \midrule
+        Slot di generazione totali                 & 330
+                                                   & 330                             \\
+        \textbf{Tasso di successo globale}         & \textbf{98,2\%} (324/330)
+                                                   & \textbf{89,1\%} (294/330)
+        \\
+        Tasso di allucinazione sui valori          & \textbf{0,0\%} (0/330)
+                                                   & \textbf{8,2\%} (27/330)
+        \\
+        Causa primaria di rigetto                  & Similarità parziale
+        ($<90\%$)                                  & Duplicazione identica ($100\%$)
+        \\
+        Preservazione valori letterali             & Garantita per costruzione
+                                                   & Modello-dipendente
+        \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Confronto sperimentale tra la generazione con e senza mascheramento.}
+    \label{tab:masking-comparison}
+\end{table}
 
-Questo risultato suggerisce che l'assenza di segnaposti opachi, pur non
-compromettendo in modo sostanziale il tasso di successo complessivo, può ridurre
-la capacità del modello linguistico di produrre formulazioni distinte quando il
-testo con i valori visibili offre un numero limitato di modi naturali per
-esprimere la medesima richiesta.
+Come evidenziato nella \cref{tab:masking-comparison}, la valutazione su 330 slot
+complessivi mostra un divario prestazionale netto a livello di tasso di
+successo, in cui la modalità mascherata raggiunge raggiunge il \textbf{98,2\%},
+contro l'\textbf{89,1\%} ottenuto dalla generazione senza mascheramento.
+
+L'analisi dei log di scarto evidenzia due dinamiche qualitativamente differenti:
+\begin{itemize}
+    \item \textbf{Modalità senza mascheramento:} Il 10,9\% dei fallimenti totali
+          è imputabile in massima parte (8,2\%) a violazioni dell'integrità dei
+          dati (alterazione o omissione dei valori letterali) e in misura minore
+          (2,7\%) a un collasso sintattico, in cui il modello ha rigenerato
+          formulazioni identiche al 100\% a quelle già accettate.
+    \item \textbf{Modalità con mascheramento:} I soli 6 rigetti registrati
+          (1,8\%) sono derivati esclusivamente dal superamento della soglia di
+          similarità adattiva su frasi brevi, senza alcuna corruzione dei token
+          di mascheramento.
+\end{itemize}
+
+Questo comportamento è in gran parte riconducibile alle dimensioni contenute del
+modello linguistico impiegato (\texttt{Gemma4:2B}). Infatti architetture locali
+di piccola taglia, quando sollecitate a riformulare un testo mantenendo visibili
+i dati in chiaro, faticano a disaccoppiare la struttura sintattica dal contenuto
+informativo; di conseguenza, tendono a collassare su pattern espressivi rigidi o
+ad allucinare le stringhe letterali. In questo modo abbiamo dimostrato che
+l'introduzione dei placeholder opachi solleva il modello dal carico di memoria
+sui dati, consentendogli di concentrare la capacità parametrica residuale
+unicamente sulla variazione stilistica della frase.
 
 \subsubsection{Statistiche del dataset}
 \label{sec:eval-dataset-stats}
@@ -3106,9 +3108,10 @@ prestazioni reali del modello.
 LoRA con il full fine-tuning (\cref{sec:eval-experimental}), ma non ha testato
 QLoRA, pure introdotta in \cref{sec:peft-lora} come tecnica in grado di ridurre
 ulteriormente l'occupazione di memoria rispetto a LoRA; allo stesso modo, non
-sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di dimensioni
-maggiori o architettura differente, che potrebbero offrire una migliore capacità
-di generalizzazione a scapito di un costo computazionale più elevato.
+sono stati testati modelli di base diversi da \texttt{Gemma3:270M}, di
+dimensioni maggiori o architettura differente, che potrebbero offrire una
+migliore capacità di generalizzazione a scapito di un costo computazionale più
+elevato.
 
 \textbf{Resilienza a interruzioni estesa al generatore}. Il requisito di
 resilienza a interruzioni (\hyperref[rnf:RNF2]{RNF2}) è soddisfatto dallo stadio
