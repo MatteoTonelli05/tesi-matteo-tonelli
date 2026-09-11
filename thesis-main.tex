@@ -87,6 +87,56 @@ su knowledge graph clinico-oncologico}
 \chapter{Introduzione}
 \label{chap:introduzione}
 
+Negli ultimi anni, l'avvento dell'Intelligenza Artificiale Generativa (GenAI) e
+dei \textit{Large Language Models} sta trasformando radicalmente il modo in cui
+le persone interagiscono con la tecnologia, aprendo scenari inediti per la
+creazione di interfacce avanzate in linguaggio naturale. Nel dominio della
+sanità e della ricerca biomedica, dove la complessità delle informazioni e la
+frammentazione delle basi di conoscenza rappresentano da sempre un limite
+operativo, l'adozione di soluzioni basate su GenAI offre l'opportunità di
+abbattere le barriere tecniche di accesso al dato. Consentire a medici, clinici
+e ricercatori di interrogare i sistemi informativi sanitari ponendo semplici
+domande nel proprio linguaggio naturale significa velocizzare i processi
+diagnostici, facilitare l'estrazione di evidenze scientifiche e restituire al
+personale sanitario un ruolo centrale e diretto nella fruizione delle
+informazioni, senza la mediazione di intermediari informatici o la necessità di
+apprendere linguaggi di interrogazione complessi.
+
+In questo contesto si inserisce il presente lavoro di tesi, che affronta e
+risolve l'assenza di un dataset di addestramento specifico per l'interrogazione
+in linguaggio naturale del \textit{knowledge graph} del Cancer Virtual Lab. A
+tale scopo, è stata progettata, sviluppata e validata una pipeline automatica a
+due stadi per la generazione di dati sintetici, la cui efficacia è stata poi
+dimostrata empiricamente. Il primo stadio della pipeline esplora il grafo di
+conoscenza per costruire query SPARQL deterministiche e sintatticamente valide,
+mentre il secondo stadio, fondato su tecniche di \textit{data augmentation},
+declina tali strutture in un ampio spettro di forme conversazionali fluide e
+stilisticamente varie. Per certificare in modo inconfutabile l'efficacia
+metodologica della pipeline e far fronte alle limitazioni hardware dell'ambiente
+di sviluppo della tesi, il dataset generato è stato impiegato per effettuare il
+\textit{fine-tuning} in locale di un modello linguistico ultra-compatto.
+Riuscire a infondere la complessa grammatica formale e la semantica
+dell'ontologia medica in un'architettura così minimale ha costituito lo "stress
+test" definitivo per la qualità del corpus sintetico, dimostrando come una
+struttura di dati estremamente curata sia in grado di colmare le limitazioni
+capacitive della rete neurale e ponendo basi eccellenti per il futuro impiego su
+modelli di grande scala all'interno dell'infrastruttura clinica.
+
+Il presente elaborato è organizzato in modo da guidare il lettore attraverso
+tutte le fasi logiche e tecniche della ricerca. Il \cref{chap:background}
+fornisce il contesto teorico, introducendo i concetti fondamentali sui grafi di
+conoscenza, sul linguaggio SPARQL e sulle architetture dei modelli linguistici.
+Il \cref{chap:analisi} definisce i requisiti funzionali, i vincoli di
+riservatezza e gli obiettivi architetturali del progetto, mentre il
+\cref{chap:progettazione} illustra nel dettaglio il design della pipeline a due
+stadi. Successivamente, il \cref{chap:implementation} scende nei dettagli
+operativi dello sviluppo, analizzando le sfide affrontate nella manipolazione
+dell'ontologia e nella generazione stilistica. Infine, il
+\cref{chap:evaluation} presenta la valutazione sperimentale dell'addestramento,
+analizzando le prestazioni e le metriche di errore, prima di giungere alle
+conclusioni che riassumono i traguardi raggiunti e delineano le direzioni di
+sviluppo future.
+
 \chapter{Background}
 \label{chap:background}
 
@@ -1196,7 +1246,7 @@ queste sono strettamente collegate tra loro:
 
 \begin{itemize}
     \item \texttt{FilterApiMixin} incapsula le chiamate di rete verso l'API
-          interna del CVL;
+          interna di CVL;
 
     \item \texttt{DiscoveryMixin} costruisce la mappa del grafo dello schema;
 
@@ -1552,7 +1602,7 @@ contempo di produrre una quantità di dati eccessiva rispetto allo scopo.
 
 Una volta pianificata una combinazione di route e proprietà da trasformare in un
 record, ha inizio l'intero processo di costruzione del record vero e proprio, il
-quale comporta diverse chiamate di rete verso l'API del CVL. Questo processo può
+quale comporta diverse chiamate di rete verso l'API di CVL. Questo processo può
 essere eseguito in sequenza, una combinazione alla volta, oppure in parallelo su
 più thread, ciascuno impegnato a costruire un record diverso in contemporanea
 agli altri, a seconda della configurazione.
@@ -1657,7 +1707,7 @@ del generatore.
 \subsubsection{Il percorso online}
 
 Quando \texttt{offline\_history} è disattivato, lo scheletro viene costruito
-camminando passo per passo tramite chiamate ricorsive nell'API del CVL,
+camminando passo per passo tramite chiamate ricorsive nell'API di CVL,
 esplorando in modo consequenziale proprietà e relazioni. Per ogni terminal della
 combinazione, il sistema percorre uno per uno i salti della sua chain
 (\cref{sec:impl-routes}) e, a partire dall'entità radice, a ogni salto chiede
@@ -1701,7 +1751,7 @@ sviluppo e vengono descritti di seguito.
 
 Con \texttt{offline\_history} attivo, come nei run di produzione, tutta la
 camminata appena descritta viene saltata e lo scheletro non si costruisce
-esplorando dal vivo l'API del CVL, ma viene ricostruito interamente in locale a
+esplorando dal vivo l'API di CVL, ma viene ricostruito interamente in locale a
 partire dai dati che la scoperta della mappa aveva già raccolto per ciascuna
 proprietà (\cref{sec:impl-discovery}). Per ogni terminal coinvolto nella
 combinazione, il sistema ricrea la stessa sequenza di nodi intermedi che
